@@ -200,6 +200,7 @@ export async function reconcileSkippedStagingEquivalence({
   mainSha,
   productionSha,
   assess = assessFreshProductionCandidate,
+  log = console.log,
 }) {
   if (plan?.reason !== 'skipped_staging_requires_review') return plan;
   assert.equal(plan.dispatch, false, 'Skipped staging must not already dispatch');
@@ -221,6 +222,20 @@ export async function reconcileSkippedStagingEquivalence({
     if (!(error instanceof ProductionCandidateSupersededError)) throw error;
     assert.equal(error.candidateSha, productionSha);
     assert.equal(error.mainSha, mainSha);
+    // Limit and escape paths before emitting a GitHub workflow annotation.
+    const preview = error.relevantPaths
+      .slice(0, 8)
+      .map((path) => JSON.stringify(String(path).slice(0, 120)));
+    const omitted = error.relevantPaths.length - preview.length;
+    const details =
+      `Production convergence blocked: deployed SHA ${productionSha}; main SHA ${mainSha}; ` +
+      `deployment-relevant paths (${error.relevantPaths.length}): ` +
+      (preview.join(', ') || 'none') +
+      (omitted > 0 ? ` (+${omitted} more)` : '');
+    log(
+      '::notice::' +
+        details.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')
+    );
     // A deployment-relevant difference is not authority to skip recovery.
     return plan;
   }

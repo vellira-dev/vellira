@@ -178,8 +178,10 @@ test('verified deployed release-sync equivalence closes skipped staging without 
 
 test('deployment-relevant changes retain skipped-staging block', async () => {
   const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const notices = [];
   const result = await reconcileSkippedStagingEquivalence({
     plan, mainSha: b, productionSha: a,
+    log: (message) => notices.push(message),
     assess: async () => {
       throw new ProductionCandidateSupersededError('runtime files changed', {
         candidateSha: a,
@@ -189,6 +191,38 @@ test('deployment-relevant changes retain skipped-staging block', async () => {
     },
   });
   assert.strictEqual(result, plan);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0], /^::notice::Production convergence blocked:/);
+  assert.ok(notices[0].includes(a));
+  assert.ok(notices[0].includes(b));
+  assert.ok(notices[0].includes('apps/website/app/page.tsx'));
+});
+
+test('blocked recovery notice bounds and escapes untrusted paths', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const notices = [];
+  const paths = [
+    'apps/website/unsafe%0A\n::error::injected',
+    ...Array.from({ length: 11 }, (_, index) => `apps/website/path-${index}`),
+  ];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    log: (message) => notices.push(message),
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('stale', {
+        candidateSha: a, mainSha: b, relevantPaths: paths,
+      });
+    },
+  });
+  assert.strictEqual(result, plan);
+  assert.equal(notices.length, 1);
+  assert.ok(notices[0].startsWith('::notice::'));
+  assert.ok(notices[0].includes('deployment-relevant paths (12)'));
+  assert.ok(notices[0].includes('(+4 more)'));
+  assert.ok(notices[0].includes('%250A'), 'Percent escapes must be escaped');
+  assert.equal(notices[0].includes('\n'), false, 'Must not inject a second workflow command');
+  assert.equal(notices[0].includes('apps/website/path-7'), false);
+  assert.ok(notices[0].length < 1500, 'Annotation must remain bounded');
 });
 
 test('other recovery decisions never invoke release-sync equivalence proof', async () => {
