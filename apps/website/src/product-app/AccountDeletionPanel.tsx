@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { Button, Modal, Portal } from '@vellira-ui/react';
+import { Button, Modal, Portal, Select } from '@vellira-ui/react';
 
 import {
   getAccountDeletionRequestStatus,
@@ -31,6 +31,8 @@ export function AccountDeletionPanel() {
   const previewEnabled = localAccountPreview && status === 'ready' && !!userId;
   const [revision, setRevision] = useState(0);
   const [dialogUserId, setDialogUserId] = useState<string | null>(null);
+  const [previewStatus, setPreviewStatus] =
+    useState<AccountDeletionRequestStatus>('none');
   const [storedRead, setStoredRead] = useState<DeletionRead>({
     kind: 'loading',
     userId: '',
@@ -67,6 +69,9 @@ export function AccountDeletionPanel() {
     storedRead.revision === revision
       ? storedRead
       : { kind: 'loading', userId, revision };
+  const displayRead: DeletionRead = previewEnabled
+    ? { kind: 'ready', userId, revision, value: previewStatus }
+    : visibleRead;
   const previewOpen = previewEnabled && dialogUserId === userId;
 
   return (
@@ -138,22 +143,40 @@ export function AccountDeletionPanel() {
           )}
         </Modal>
       </div>
-      {!localAccountPreview && status === 'ready' && !!userId && (
+      {previewEnabled && (
+        <div className={styles.previewControls} data-deletion-status-preview>
+          <Select
+            label='Preview request status'
+            value={previewStatus}
+            size='md'
+            onValueChange={(value) => {
+              if (value === 'none' || value === 'pending_review') {
+                setPreviewStatus(value);
+              }
+            }}
+          >
+            <Select.Item value='none'>No request</Select.Item>
+            <Select.Item value='pending_review'>Pending review</Select.Item>
+          </Select>
+          <p>Local preview only. No status request is sent to Vellira.</p>
+        </div>
+      )}
+      {status === 'ready' && !!userId && (
         <div className={styles.requestStatus} data-account-deletion-status>
-          {visibleRead.kind === 'loading' && (
+          {displayRead.kind === 'loading' && (
             <p role='status'>Checking deletion request status…</p>
           )}
-          {visibleRead.kind === 'ready' && visibleRead.value === 'none' && (
+          {displayRead.kind === 'ready' && displayRead.value === 'none' && (
             <p role='status'>No deletion request is pending.</p>
           )}
-          {visibleRead.kind === 'ready' &&
-            visibleRead.value === 'pending_review' && (
+          {displayRead.kind === 'ready' &&
+            displayRead.value === 'pending_review' && (
               <p role='status'>
                 Deletion request pending review. Your account remains active; no
                 data has been erased.
               </p>
             )}
-          {visibleRead.kind === 'error' && (
+          {displayRead.kind === 'error' && (
             <div className={styles.statusError}>
               <p role='alert'>
                 Deletion request status is temporarily unavailable.
