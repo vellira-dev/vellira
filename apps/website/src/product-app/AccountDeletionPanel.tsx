@@ -155,9 +155,7 @@ export function AccountDeletionPanel() {
             )}
           {visibleRead.kind === 'error' && (
             <div className={styles.statusError}>
-              <p role='alert'>
-                Deletion request status is temporarily unavailable.
-              </p>
+              <p role='alert'>Deletion request status is temporarily unavailable.</p>
               <Button
                 type='button'
                 appearance='link'
