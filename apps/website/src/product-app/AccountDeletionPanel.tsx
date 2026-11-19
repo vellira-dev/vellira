@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button, Modal, Portal } from '@vellira-ui/react';
 
+import {
+  getAccountDeletionRequestStatus,
+  type AccountDeletionRequestStatus,
+} from './api';
 import { localAccountPreview, useAppSession } from './AppSession';
 
 import profileStyles from './AccountProfilePanel.module.css';
@@ -12,10 +16,56 @@ import styles from './AccountDeletionPanel.module.css';
 // Account deletion has no authorized backend contract yet (#196). This card
 // never calls an API or mutates account state. Only the explicit local
 // development fixture can open the non-mutating confirmation preview.
+type DeletionRead =
+  | { kind: 'loading' | 'error'; userId: string; revision: number }
+  | {
+      kind: 'ready';
+      userId: string;
+      revision: number;
+      value: AccountDeletionRequestStatus;
+    };
+
 export function AccountDeletionPanel() {
   const { me, status } = useAppSession();
   const userId = me?.id ?? '';
   const previewEnabled = localAccountPreview && status === 'ready' && !!userId;
+  const [revision, setRevision] = useState(0);
+  const [storedRead, setStoredRead] = useState<DeletionRead>({
+    kind: 'loading',
+    userId: '',
+    revision: 0,
+  });
+
+  useEffect(() => {
+    // This is a read-only session-scoped view, never a deletion request.
+    // The local design fixture must not make real backend requests.
+    if (localAccountPreview || status !== 'ready' || !userId) return;
+
+    const abort = new AbortController();
+    void getAccountDeletionRequestStatus(abort.signal)
+      .then((value) => {
+        if (!abort.signal.aborted) {
+          setStoredRead({ kind: 'ready', userId, revision, value });
+        }
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) {
+          setStoredRead({ kind: 'error', userId, revision });
+        }
+      });
+
+    return () => abort.abort();
+  }, [status, userId, revision]);
+
+  // Never display the previous account's status while the current session
+  // or a retry is resolving, including during the render before effects run.
+  const visibleRead: DeletionRead =
+    status === 'ready' &&
+    !!userId &&
+    storedRead.userId === userId &&
+    storedRead.revision === revision
+      ? storedRead
+      : { kind: 'loading', userId, revision };
   const [dialogUserId, setDialogUserId] = useState<string | null>(null);
   const previewOpen = previewEnabled && dialogUserId === userId;
 
@@ -88,6 +138,37 @@ export function AccountDeletionPanel() {
           )}
         </Modal>
       </div>
+      {!localAccountPreview && status === 'ready' && !!userId && (
+        <div className={styles.requestStatus} data-account-deletion-status>
+          {visibleRead.kind === 'loading' && (
+            <p role='status'>Checking deletion request status…</p>
+          )}
+          {visibleRead.kind === 'ready' && visibleRead.value === 'none' && (
+            <p role='status'>No deletion request is pending.</p>
+          )}
+          {visibleRead.kind === 'ready' &&
+            visibleRead.value === 'pending_review' && (
+              <p role='status'>
+                Deletion request pending review. Your account remains active;
+                no data has been erased.
+              </p>
+            )}
+          {visibleRead.kind === 'error' && (
+            <div className={styles.statusError}>
+              <p role='alert'>Deletion request status is temporarily unavailable.</p>
+              <Button
+                type='button'
+                appearance='link'
+                color='neutral'
+                size='sm'
+                onClick={() => setRevision((current) => current + 1)}
+              >
+                Retry status
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       <p id='account-deletion-help' className={styles.help}>
         {previewEnabled
           ? 'Demo only — this action cannot delete an account.'
