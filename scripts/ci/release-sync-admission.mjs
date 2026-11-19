@@ -18,6 +18,13 @@ export const STARTER_CHECKS = Object.freeze([
   'Analyze (actions)', 'Analyze (javascript-typescript)'
 ]);
 
+// Only atomic release PRs trigger the path-filtered Release Candidate Proof.
+// Standalone Starter sync PRs must not wait for checks their workflow cannot run.
+export const RELEASE_CONSUMER_CHECKS = Object.freeze([
+  'Clean Vite consumer', 'Clean Next.js consumer', 'Clean Expo consumer',
+  'Clean docs first-use'
+]);
+
 const STARTER_FILES = new Set([
   'examples/workspace-starter/README.md',
   'examples/workspace-starter/native/package.json',
@@ -57,7 +64,8 @@ export function classifyAdmission(pr, files) {
   if (native !== web) throw new Error('Atomic Starter sync must include both Web and Native');
   return {
     kind: starter ? 'starter' : 'release',
-    checks: [...BASELINE_CHECKS, ...(native ? STARTER_CHECKS : [])]
+    checks: [...BASELINE_CHECKS, ...(native ? STARTER_CHECKS : []),
+      ...(native && release ? RELEASE_CONSUMER_CHECKS : [])]
   };
 }
 
