@@ -37,7 +37,10 @@ test('React Hooks ESLint resolves patched Zod 4 without a global major override'
 test('Scorecard #32 removes the legacy Zod 3 path via supported Lighthouse tooling', () => {
   const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
   assert.equal(manifest.devDependencies['@lhci/cli'], '0.16.1');
-  assert.match(lockfile, /^      '@lhci\/cli':\n        specifier: 0\.16\.1\n        version: 0\.16\.1\(/m);
+  assert.match(
+    lockfile,
+    /^      '@lhci\/cli':\n        specifier: 0\.16\.1\n        version: 0\.16\.1\(/m
+  );
   assert.match(lockfile, /^  lighthouse@13\.6\.0:/m);
   assert.match(lockfile, /^  puppeteer-core@25\.\d+\.\d+:/m);
   assert.match(lockfile, /^  chromium-bidi@157\.0\.8090-0:/m);
