@@ -213,7 +213,7 @@ test('multi-commit website drift plus atomic release-sync must keep recovery blo
       githubToken: 'fixture-token',
       fetchImpl: async (url) => {
         fetched.push(String(url));
-        assert.match(String(url), /\\/compare\\//);
+        assert.match(String(url), /\/compare\//);
         return new Response(JSON.stringify({
           status: 'ahead',
           ahead_by: 3,
