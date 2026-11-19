@@ -366,7 +366,8 @@ export function compileComponentProgram(
       if (
         !parsed.modules.some((selection) => selection.id === id) &&
         !registry.some((module) => module.id === id)
-      ) continue;
+      )
+        continue;
       finding(
         'missing-grammar-capability',
         id,
