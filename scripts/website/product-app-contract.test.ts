@@ -79,7 +79,9 @@ describe('Vellira App browser API contract', () => {
 
       expect(fetchMock).toHaveBeenCalledTimes(1);
       const [url, init] = fetchMock.mock.calls[0] ?? [];
-      expect(url).toBe('https://api.vellira.dev/v1/auth/account/deletion/status');
+      expect(url).toBe(
+        'https://api.vellira.dev/v1/auth/account/deletion/status'
+      );
       expect(init).toEqual(
         expect.objectContaining({
           credentials: 'include',
