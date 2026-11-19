@@ -56,6 +56,7 @@ export function createToolingTasks({
     'scripts/ci/dependabot-runtime-candidate-authority.test.mjs',
     'scripts/ci/dependabot-verified-backports.test.mjs',
     'scripts/ci/security-patched-dependencies.test.mjs',
+    'scripts/ci/security-zod4-advisory.test.mjs',
     'scripts/seo/external-audit-regressions.test.mjs',
     'scripts/seo/docs-redirect-smoke.test.mjs',
     'scripts/seo/docs-sitemap-smoke.test.mjs',

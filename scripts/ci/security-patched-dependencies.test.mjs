@@ -7,7 +7,6 @@ import test from 'node:test';
 import braces from 'braces';
 
 const require = createRequire(import.meta.url);
-const { sprintf } = require('sprintf-js');
 
 function nestedAst(depth) {
   let node = { type: 'text', value: 'a' };
@@ -39,24 +38,13 @@ test('braces security backport bounds caller-supplied recursive ASTs', () => {
   assert.throws(() => braces.expand(nestedAst(101)), /exceeds max depth/);
 });
 
-test('sprintf-js security backport rejects precision above the native bound', () => {
-  for (const format of ['%.101f', '%.101e', '%.101g', '%.200f']) {
-    assert.throws(
-      () => sprintf(format, 1),
-      (error) =>
-        error instanceof RangeError &&
-        /precision must be between 0 and 100/.test(error.message)
-    );
-  }
-});
+test('removed sprintf-js 1.0.3 path cannot silently re-enter the dependency graph', () => {
+  const lockfile = readFileSync('pnpm-lock.yaml', 'utf8');
+  const workspace = readFileSync('pnpm-workspace.yaml', 'utf8');
 
-test('sprintf-js security backport preserves supported precision boundaries', () => {
-  assert.doesNotThrow(() => sprintf('%.0f', 1));
-  assert.doesNotThrow(() => sprintf('%.100f', 1));
-  assert.doesNotThrow(() => sprintf('%.0e', 1));
-  assert.doesNotThrow(() => sprintf('%.100e', 1));
-  assert.doesNotThrow(() => sprintf('%.0g', 1));
-  assert.doesNotThrow(() => sprintf('%.100g', 1));
+  assert.doesNotMatch(lockfile, /^  sprintf-js@1\.0\.3:$/m);
+  assert.doesNotMatch(workspace, /'sprintf-js@1\.0\.3':/);
+  assert.match(workspace, /^allowUnusedPatches: false$/m);
 });
 
 test('deepmerge security backport rejects unsafe keys across entrypoints', () => {

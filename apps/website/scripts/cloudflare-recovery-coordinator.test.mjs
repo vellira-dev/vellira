@@ -8,7 +8,10 @@ import {
   observedMainPushAt,
   fetchActiveProductionRuns,
 } from './cloudflare-recovery-coordinator.mjs';
-import { ProductionCandidateSupersededError } from './cloudflare-production-freshness.mjs';
+import {
+  assessFreshProductionCandidate,
+  ProductionCandidateSupersededError,
+} from './cloudflare-production-freshness.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
@@ -194,6 +197,68 @@ test('other recovery decisions never invoke release-sync equivalence proof', asy
     plan, mainSha: b, productionSha: a,
     assess: async () => { throw new Error('Must not fetch'); },
   }), plan);
+});
+
+test('multi-commit website drift plus atomic release-sync must keep recovery blocked', async () => {
+  // Real-world pattern: production A, an intervening engineering change, then
+  // an authenticated release-sync-only main B whose staging deploy was skipped.
+  // A combined compare is NOT a single release-sync and must never inherit
+  // the atomic-sync exception.
+  const skipped = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const fetched = [];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan: skipped, mainSha: b, productionSha: a,
+    assess: (options) => assessFreshProductionCandidate({
+      ...options,
+      githubToken: 'fixture-token',
+      fetchImpl: async (url) => {
+        fetched.push(String(url));
+        assert.match(String(url), /\\/compare\\//);
+        return new Response(JSON.stringify({
+          status: 'ahead',
+          ahead_by: 3,
+          behind_by: 0,
+          total_commits: 3,
+          files: [
+            { filename: 'package.json', status: 'modified' },
+            { filename: 'examples/workspace-starter/web/package.json', status: 'modified' },
+            { filename: 'scripts/ci/release-sync-admission.mjs', status: 'modified' },
+          ],
+        }), { status: 200 });
+      },
+    }),
+  });
+  assert.strictEqual(result, skipped);
+  assert.equal(fetched.length, 1, 'No candidate manifest read can authorize mixed commit drift');
+});
+
+test('diverged or incomplete GitHub compare fails closed without a no-op decision', async () => {
+  const skipped = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  for (const comparison of [
+    { status: 'diverged', files: [] },
+    { status: 'ahead' },
+  ]) {
+    await assert.rejects(reconcileSkippedStagingEquivalence({
+      plan: skipped, mainSha: b, productionSha: a,
+      assess: (options) => assessFreshProductionCandidate({
+        ...options,
+        githubToken: 'fixture-token',
+        fetchImpl: async () => new Response(JSON.stringify(comparison), { status: 200 }),
+      }),
+    }));
+  }
+});
+
+test('stale evidence exception with mismatched source SHA fails closed', async () => {
+  await assert.rejects(reconcileSkippedStagingEquivalence({
+    plan: { dispatch: false, reason: 'skipped_staging_requires_review' },
+    mainSha: b, productionSha: a,
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('mismatched proof', {
+        candidateSha: b, mainSha: b, relevantPaths: ['package.json'],
+      });
+    },
+  }));
 });
 
 test('missing or mismatched release-sync evidence fails closed', async () => {

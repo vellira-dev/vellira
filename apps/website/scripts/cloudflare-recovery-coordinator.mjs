@@ -191,9 +191,10 @@ export function decideRecovery({
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
-// Only a skipped, authenticated release-sync staging run can use this
-// read-only proof. Production identity comes from the live runtime, and the
-// shared admission verifier checks exact Git ancestry and release-sync bytes.
+// A skipped staging job is not evidence of a deployed website. Only after
+// the shared production-admission verifier proves the immutable live runtime
+// SHA is deployment-equivalent to current main (including authenticated
+// release-sync bytes) may recovery classify this as an already-deployed no-op.
 export async function reconcileSkippedStagingEquivalence({
   plan,
   mainSha,

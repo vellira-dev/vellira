@@ -68,9 +68,18 @@ export async function fetchWithCloudflareEdgeRetry(
         headers: response.headers,
         native: response,
         text: () => response.text(),
-        dispose: () => {
+        dispose: async () => {
+          // Aborting the transport can make cancel() reject with AbortError.
+          // That is an expected outcome of discarding this response, not an
+          // error in the upstream probe or an authorization to retry it.
           disposal.abort();
-          if (!response.body?.locked) return response.body?.cancel();
+          if (!response.body?.locked) {
+            try {
+              await response.body?.cancel();
+            } catch (error) {
+              if (error?.name !== 'AbortError') throw error;
+            }
+          }
         },
       };
     },
