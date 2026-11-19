@@ -1,0 +1,34 @@
+# One-off, read-only branch-local formatter diagnostic. Not part of release PR.
+name: Account 2178 Prettier Diagnostic
+on:
+  push:
+    branches:
+      - diagnostic/2178-prettier-20261119
+
+permissions:
+  contents: read
+
+jobs:
+  diff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout exact diagnostic source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Print expected Prettier changes without changing repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = refs/heads/diagnostic/2178-prettier-20261119
+          mkdir -p "$RUNNER_TEMP/prettier-2178"
+          npm --prefix "$RUNNER_TEMP/prettier-2178" install \
+            --ignore-scripts --no-audit --no-fund --no-save --package-lock=false \
+            prettier@3.9.10
+          "$RUNNER_TEMP/prettier-2178/node_modules/.bin/prettier" \
+            apps/website/src/product-app/AccountDeletionPanel.tsx --write
+          echo "::group::exact Prettier diff"
+          git diff -- apps/website/src/product-app/AccountDeletionPanel.tsx
+          echo "::endgroup::"
+          test "$(git diff --name-only | wc -l)" -le 1
