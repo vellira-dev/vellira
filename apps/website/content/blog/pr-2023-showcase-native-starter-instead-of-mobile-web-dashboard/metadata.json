@@ -1,0 +1,9 @@
+{
+  "title": "Repository engineering review in Vellira",
+  "description": "How Vellira keeps repository tooling reviewable through repository-owned checker wiring, with focused coverage as supporting evidence.",
+  "slug": "pr-2023-showcase-native-starter-instead-of-mobile-web-dashboard",
+  "publishedAt": "2026-11-01",
+  "author": "Roman Bakurov",
+  "tags": ["Engineering", "Vellira"],
+  "draft": true
+}
