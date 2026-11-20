@@ -1,55 +1,146 @@
-Repository tooling is easy to overestimate from filenames alone. The useful engineering question is which relationships the inspected evidence actually establishes. In this change, `scripts/checks/vellira-ui-usage/exceptions.ts` identifies the implementation surface. Those surfaces define the reviewable slice of the tooling story. The article can explain how that evidenced slice fits together, why its boundaries matter during review, and where maintainers should look when the represented wiring changes. It cannot fill gaps with plausible adjacent roles simply because they are common in repository tooling. Keeping the prose limited to present evidence turns changed filenames into a reviewable account without treating an unseen part of the path as established. That same boundary gives future reviewers a precise place to resume investigation when the represented surfaces evolve.
+A product website can easily drift away from the product it is supposed to explain. That risk is especially high when a React website needs to demonstrate a React Native application: rebuilding the mobile UI in web components is convenient, but the preview can quietly become a second implementation with different states, different behavior, and different maintenance costs.
 
-The practical consequence is a review route rather than a broad claim about the tooling. Start with the named command or implementation source, compare the configuration and workflow surfaces where they are present, and use result fields or focused cases to locate the next concern. Each step stays attached to a repository-owned responsibility, which makes a later investigation easier to resume when one part of the represented wiring changes.
+Vellira took a narrower approach for its Native Starter showcase. The desktop demo remains the real React Web dashboard, while the Mobile preview is generated from the canonical Expo Native Starter source and adapted only at the browser boundary. A follow-up change then synchronized the isolated mobile preview with the website's active theme.
 
-## Problem and constraint
+The goal is not to pretend that a browser iframe is an iOS or Android runtime. The goal is to keep the website preview tied to the same product source that developers actually receive.
 
-The maintenance problem begins with the selected source material. That surface is concrete, but it only remains useful when it can be compared with the checker implementation and the focused test cases. Looking at one file or command in isolation makes it easy to miss a responsibility that moved elsewhere in the same change.
+## The problem: a mobile preview can become a fork
 
-The constraint is to keep those responsibilities separate while making their boundaries inspectable. A reviewer should be able to identify the entry point, the implementation or configuration that shapes it, and the coverage that makes a specific concern visible. That sequence supports a maintenance decision and keeps broader behavior questions with their own source boundaries. It also keeps the article centered on the responsibility under review.
+Before [PR #2023](https://github.com/vellira-dev/vellira/pull/2023), the homepage Mobile state could be represented by narrowing the web dashboard or by maintaining a separate hand-written approximation.
 
-## What changed
+Both options create the same architectural problem: the marketing preview can evolve independently from the Native Starter.
 
-This part of the change is anchored in `NativeStarterPreview` from `apps/website/src/sections/home/ProductInterfaceDemo/NativeStarterPreview.tsx` and `ProductInterfaceDemo` from `apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx`. It gives review a concrete surface to discuss instead of relying on a broad description of the repository. Its neighboring review surfaces are the checker implementation and the focused test cases, each with a distinct responsibility in the selected material.
+That makes seemingly small changes expensive. A settings screen may be updated in Expo but not on the website. A notice component may gain a new state in the starter while the preview keeps the old one. Design tokens can remain similar while interaction semantics diverge.
 
-That separation matters during implementation review. A command, source module, configuration declaration, or result shape can change independently, so the useful question is which adjacent boundary needs to be compared before the change is considered complete. Keep those named surfaces as separate responsibilities. An unstated call graph or runtime outcome requires an additional source boundary beyond proximity between filenames.
+For Vellira, the useful constraint was stronger:
 
-## How it works
+> The Native Starter remains authoritative. The website may project it into the browser, but it should not become a second source of product UI.
 
-The mechanism starts with `NativeStarterFramePage` from `apps/website/src/app/(marketing)/demo/native-starter/page.tsx` and `NativeStarterPreview` from `apps/website/src/sections/home/ProductInterfaceDemo/NativeStarterPreview.tsx`. The selected material places that surface in a sequence of explicit responsibilities rather than leaving the next maintenance step implicit.
+That constraint determines how the preview is built and what it is allowed to claim.
 
-For a focused investigation, begin at that boundary and then compare it with the checker implementation and the focused test cases. Keep each handoff narrow: a value, command, or result should be followed only to the next represented responsibility. That makes a missing connection easier to identify and gives the next change a clear source location to revisit.
+## Generate the browser preview from the canonical Expo source
 
-## Cross-platform details
+The Mobile showcase imports a web-local copy of selected Native Starter source: the app shell, settings UI, workspace notice, and pure project UX modules.
 
-The platform detail is a comparison point for the source-backed surfaces placed in this section. It helps a maintainer keep the represented environments aligned as the suite evolves.
+That copy is not maintained manually. The repository exposes a synchronization step:
 
-The static cases “switches mobile platform preview away from the React Web iframe” and “removes the backing card from the mobile phone preview” add scenario-level detail to the comparison. Their names give reviewers a useful way to compare the interaction concerns carried by the matrix.
+```text
+node scripts/website/sync-native-starter-preview.mjs
+```
 
-The practical maintenance rule is to review a changed project declaration with its related policy and invocation. That keeps platform scope legible while the suite changes.
+The same script also supports a check mode so CI can verify that the browser projection still matches the authoritative Expo source.
 
-## Accessibility and interaction
+This matters because generated source changes the review question. Instead of asking whether two implementations still look similar, maintainers can ask whether the website projection is still mechanically synchronized with the source it represents.
 
-The interaction work is anchored in named cases such as “keeps only a compact caption and the setup link under Mobile”. Those names make the review questions concrete: keyboard movement, focus management, portals, or dismissal behavior can be discussed as part of a specific scenario instead of as an abstract accessibility aspiration.
+The original Expo app remains unchanged. Website-specific compatibility stays outside the Native Starter rather than leaking browser constraints back into the package developers actually use.
 
-This keeps the section focused on the relationship between named intent and the source surfaces that organize it. That focus helps a contributor decide what needs to move when an interaction contract changes.
+## Adapt only the browser-specific boundaries
 
-The useful maintenance question is whether the scenario still describes the interaction that the component exposes. If it does not, update the scenario, its selection path, and the relevant policy together so the next investigation starts from a coherent suite.
+A real React Native application cannot simply be imported into a Next.js website unchanged. Some dependencies are runtime-specific, and resolving the separate Expo project's dependency tree directly from the website can create bundler and parser problems.
 
-## Integration and enforcement
+Vellira limits the browser bridge to a small set of explicit substitutions:
 
-`velliraUiUsageExceptions` in `scripts/checks/vellira-ui-usage/exceptions.ts` records an explicit integration surface in the selected material. The important point is not that automation or configuration exists, but that a maintainer can compare this boundary with the checker implementation when the normal engineering workflow changes.
+- Expo Blur
+- Safe Area handling
+- AsyncStorage
 
-Keep the responsibilities distinct during that comparison. An invocation records how a command is reached; an implementation source records its own logic; and a result shape records what the selected checker can make observable. Reading those surfaces together supports a concrete wiring review and keeps execution questions with the command and source boundaries that own them.
+Everything else in the projected product surface stays as close as possible to the canonical Native Starter source.
 
-## Maintenance implications
+This is an important boundary. The browser adapter layer exists to make the preview renderable; it is not permission to reinterpret the product behavior.
 
-The maintenance boundary here is the static case “bridges the resolved website theme before the embedded native app mounts”. A later edit should revisit that surface together with the checker implementation and the focused test cases, because adjacent responsibilities can drift even when each individual declaration still appears reasonable.
+It also avoids coupling the website to the Expo project's nested `node_modules`. That keeps Turbopack from having to consume React Native-specific dependency internals that the marketing site does not own.
 
-A practical sequence is to identify the changed owner first, compare the closest configuration or caller next, and then check the focused coverage that describes the review concern. That order turns a future change into a bounded investigation instead of a search for intent across unrelated files. The scenario name, configuration label, and implementation source remain separate maintenance cues.
+The result is a narrower integration surface: canonical product source on one side, a few browser adapters on the other.
 
-## Current limitations
+## Keep web and native demos separate
 
-The boundary in this section is deliberate. The selected source material defines what this article can inspect directly, but it does not establish every runtime path, every consumer, or every adjacent repository surface. Treating a selected source as complete proof would make the article sound more certain than the change can support.
+The desktop and mobile states intentionally represent different runtimes.
 
-Use the checker implementation and the focused test cases as the next places to inspect when the question needs a broader answer. Execution evidence, additional source inspection, or focused tests may be needed to establish behavior outside this article’s scope. Keeping that distinction explicit preserves a useful review path without converting it into a promise about uninspected code.
+The desktop view continues to show Vellira's React Web dashboard. The Mobile view shows the Native Starter projection.
+
+That distinction is more useful than forcing both tabs through one implementation. Cross-platform consistency does not require the web dashboard to impersonate the mobile application, and it does not require the mobile preview to inherit web-only structure.
+
+Instead, the preview communicates a more accurate product contract:
+
+```text
+Desktop -> React Web product surface
+Mobile  -> Expo Native Starter source projected into the browser
+```
+
+The website can compare the two without erasing the runtime boundary between them.
+
+## Synchronize theme state before the preview mounts
+
+[PR #2078](https://github.com/vellira-dev/vellira/pull/2078) exposed a second problem.
+
+The Native Starter preview runs in an isolated iframe. After the first version landed, changing the website between Light and Dark mode did not necessarily update the embedded preview because the Native Starter maintained its own persisted appearance state.
+
+The fix treats theme synchronization as an explicit boundary crossing.
+
+The parent website passes its resolved theme into the preview URL. The isolated browser demo initializes the Native Starter's theme storage before mounting the canonical application.
+
+That ordering is important. If the app mounts first and theme state arrives later, the preview can briefly render with stale appearance or preserve a previous iframe state.
+
+The mapping also preserves the difference between website-level and native theme vocabulary:
+
+- website `light` -> native Light
+- website `dark` -> native Dark
+- website `high-contrast` -> native `highContrast`
+- website `system` -> the website's resolved Light or Dark value
+
+The Native Starter source still owns its theme behavior. The website owns the initial bridge that tells the isolated demo which state it should begin with.
+
+## Test the synchronization contract, not just the screenshot
+
+A preview like this has several failure modes that a static screenshot would not catch.
+
+The repository therefore checks the relationships around the showcase: that the Mobile state uses the Native Starter path rather than the React Web dashboard, that generated source remains synchronized, and that the resolved website theme is bridged before the embedded app mounts.
+
+Those checks are valuable because the maintenance risk is structural.
+
+A developer can make the preview look correct locally while accidentally breaking source parity. A theme can appear correct on first load while failing after Light -> Dark -> Light switching. A refactor can keep the iframe visible while reconnecting it to the wrong product surface.
+
+The useful tests encode those boundaries so the preview is reviewed as an integration, not as a decorative mock.
+
+## Do not overclaim what the browser proves
+
+There is still a hard limit: a browser preview is not native runtime evidence.
+
+The website can demonstrate the Native Starter's product structure, content, theme states, and much of its interaction model. It cannot prove that iOS blur, Android rendering, native gestures, safe-area behavior, or platform-specific performance are identical to the real Expo application.
+
+Vellira keeps that limitation explicit.
+
+This is important for any design system that supports both React and React Native. A cross-platform demo should make shared product semantics easier to inspect without collapsing the distinction between runtime implementations.
+
+The browser projection is useful because it is synchronized with native source, not because the browser has become native.
+
+## A practical maintenance rule
+
+When the Native Starter changes, the website preview should be treated as a generated consumer of that change.
+
+A useful review sequence is:
+
+```text
+1. Change the canonical Expo Native Starter.
+2. Regenerate the website projection.
+3. Verify source parity.
+4. Review the small browser-adapter boundary.
+5. Test desktop/mobile selection and theme synchronization.
+6. Confirm that the preview still avoids claims that require a real native runtime.
+```
+
+This keeps the expensive part of cross-platform maintenance in one place: the actual product source.
+
+The marketing site then becomes a constrained projection of that source rather than another implementation that has to be remembered during every product change.
+
+## Why this matters for Vellira
+
+Vellira's broader cross-platform model is based on sharing product semantics while allowing web and native runtimes to stay native.
+
+The Native Starter showcase applies the same idea to documentation and product presentation.
+
+The site does not need to duplicate the mobile application to explain it. It needs a trustworthy way to project the canonical source, isolate the few browser-only substitutions, and make the remaining runtime limits visible.
+
+That is a smaller promise than "the browser preview is the native app."
+
+It is also a much more maintainable one.
