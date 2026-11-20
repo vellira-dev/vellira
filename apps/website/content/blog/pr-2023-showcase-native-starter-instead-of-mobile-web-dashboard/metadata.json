@@ -1,9 +1,13 @@
 {
-  "title": "Repository engineering review in Vellira",
-  "description": "How Vellira keeps repository tooling reviewable through repository-owned checker wiring, with focused coverage as supporting evidence.",
+  "title": "Previewing a Real Expo Native Starter on the Web Without Forking It",
+  "description": "How Vellira keeps its website Mobile preview tied to the canonical Expo Native Starter, limits browser-only adapters, and synchronizes theme state across the iframe boundary.",
   "slug": "pr-2023-showcase-native-starter-instead-of-mobile-web-dashboard",
-  "publishedAt": "2026-11-01",
+  "publishedAt": "2026-11-20",
   "author": "Roman Bakurov",
-  "tags": ["Engineering", "Vellira"],
+  "tags": [
+    "React Native",
+    "Engineering",
+    "Vellira"
+  ],
   "draft": true
 }
