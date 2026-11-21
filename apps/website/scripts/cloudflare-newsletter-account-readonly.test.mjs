@@ -96,6 +96,11 @@ test('Cloudflare inventory is strictly GET-only, sanitized, and does not claim W
   assert.equal(report.workerPresence['vellira-website-staging'], 'present');
   assert.equal(report.workerPresence['vellira-website'], 'present');
   assert.equal(report.workerPresence['vellira-newsletter-budget-owner'], 'absent');
+  assert.deepEqual(report.ownerServingVersions, {
+    status: 'not_deployed',
+    sourceIdentity: 'unverified',
+    exclusiveCooperative: false,
+  });
   assert.equal(report.namespaceInventoryStatus, 'complete');
   assert.equal(report.namespaceInventoryDiagnostic, null);
   assert.equal(report.coordinatorClassNamespaceCount, 0);
