@@ -1,24 +1,85 @@
 #!/usr/bin/env node
-// Opt-in, non-publishing iOS/Android Hermes runtime proof for #1906.
-// Prepares a disposable Expo project using the real shared-graph tarball.
+// #1906 historical shared graph; #2082 accepts an exact, unmodified packed
+// candidate for iOS/Android Hermes root/leaf runtime acceptance.
 const fs = require('node:fs');
+const { createHash } = require('node:crypto');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const { getNativeExpoFixture } = require('./native-expo-fixture.cjs');
+const {
+  NATIVE_PACKAGE_NAMES,
+  validateCandidateArtifactDirectory,
+} = require('../release-candidate/consumer-artifacts.cjs');
 
 const repo = path.resolve(__dirname, '../..');
+const expoFixture = getNativeExpoFixture(process.env.VELLIRA_NATIVE_EXPO_PROFILE, repo);
 const native = path.join(repo, 'packages/react-native');
 const candidateSource = path.join(native, 'dist/shared-proof');
 const required = ['index.js', 'button.js', 'theme.js'];
+const exactTarball = process.env.VELLIRA_NATIVE_CANDIDATE_TGZ;
+if (exactTarball) {
+  if (!path.isAbsolute(exactTarball) || !exactTarball.endsWith('.tgz') ||
+      !fs.lstatSync(exactTarball, { throwIfNoEntry: false })?.isFile()) {
+    throw new Error('Exact native candidate must be an existing absolute regular .tgz file');
+  }
+}
+const packageVersion = JSON.parse(
+  fs.readFileSync(path.join(native, 'package.json'), 'utf8')
+).version;
+let candidateHash;
+let exactCandidate;
+if (exactTarball) {
+  const requiredHash = process.env.VELLIRA_NATIVE_CANDIDATE_SHA256;
+  if (!/^[a-f0-9]{64}$/.test(requiredHash ?? '')) {
+    throw new Error('Exact Native candidate requires its SHA256 pinned.');
+  }
+  candidateHash = createHash('sha256').update(fs.readFileSync(exactTarball)).digest('hex');
+  if (candidateHash !== requiredHash) {
+    throw new Error('Exact candidate SHA256 mismatch: ' + candidateHash);
+  }
+  const candidateDir = process.env.VELLIRA_CANDIDATE_DIR;
+  const expectedSha = process.env.VELLIRA_CANDIDATE_SHA;
+  if (!candidateDir || !/^[a-f0-9]{40}$/.test(expectedSha ?? '')) {
+    throw new Error('Exact Hermes candidate requires VELLIRA_CANDIDATE_DIR and VELLIRA_CANDIDATE_SHA.');
+  }
+  exactCandidate = validateCandidateArtifactDirectory(candidateDir, expectedSha, NATIVE_PACKAGE_NAMES);
+  const nativeCandidate = exactCandidate.packages.find(p => p.name === '@vellira-ui/react-native');
+  if (!nativeCandidate || path.resolve(nativeCandidate.tarballPath) !== path.resolve(exactTarball) ||
+      nativeCandidate.sha256 !== candidateHash) {
+    throw new Error('Hermes Native tarball differs from exact release candidate.');
+  }
+  const inspected = spawnSync('tar', ['-xzOf', exactTarball, 'package/package.json'], {
+    encoding: 'utf8', maxBuffer: 1024 * 1024,
+  });
+  if (inspected.error || inspected.status !== 0) {
+    throw new Error('Exact Native candidate is not a valid npm tarball.');
+  }
+  let packedManifest;
+  try {
+    packedManifest = JSON.parse(inspected.stdout);
+  } catch {
+    throw new Error('Exact Native candidate has an invalid packed manifest.');
+  }
+  if (packedManifest.name !== '@vellira-ui/react-native' ||
+      packedManifest.version !== packageVersion ||
+      !['.', './button', './theme', './select'].every(
+        (entry) => typeof packedManifest.exports?.[entry]?.['react-native'] === 'string'
+      )) {
+    throw new Error('Exact Native candidate name/version/subpath authority mismatch.');
+  }
+}
 // Optional true native layout check. The default context/Button proof is unchanged.
 const sheetProof = process.env.VELLIRA_HERMES_SHEET_PROOF === '1';
 const requestedOut = process.argv[2];
 if (process.argv.length > 3 || (requestedOut && !path.isAbsolute(requestedOut))) {
   throw new Error('Usage: node scripts/performance/native-hermes-subpath-project.cjs [absolute-empty-output-directory]');
 }
-for (const file of required) {
-  if (!fs.statSync(path.join(candidateSource, file), { throwIfNoEntry: false })?.isFile()) {
-    throw new Error(`Missing ${file}; first run pnpm --filter @vellira-ui/react-native build and build:subpaths:shared-probe`);
+if (!exactTarball) {
+  for (const file of required) {
+    if (!fs.statSync(path.join(candidateSource, file), { throwIfNoEntry: false })?.isFile()) {
+      throw new Error(`Missing ${file}; first run pnpm --filter @vellira-ui/react-native build and build:subpaths:shared-probe`);
+    }
   }
 }
 const destination = requestedOut || fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-hermes-subpaths-'));
@@ -33,15 +94,26 @@ function write(name, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value);
 }
-const packageVersion = JSON.parse(fs.readFileSync(path.join(native, 'package.json'), 'utf8')).version;
 const tarball = path.join(destination, 'vellira-hermes-shared-candidate.tgz');
-const command = spawnSync(process.execPath, [path.join(repo, 'scripts/performance/native-shared-chunk-tarball-probe.cjs')], {
-  cwd: repo,
-  env: { ...process.env, VELLIRA_SHARED_TARBALL_OUTPUT: tarball },
-  stdio: 'inherit',
-});
-if (command.error || command.status !== 0) {
-  throw new Error(`Shared-graph candidate packaging failed: ${command.error?.message || command.status}`);
+if (exactTarball) {
+  // Real candidate mode: never modify any installed package or rebuild an
+  // isolated entry. The same actual tarball must be used for iOS and Android.
+  for (const artifact of exactCandidate.packages) {
+    const target = artifact.name === '@vellira-ui/react-native'
+      ? tarball : path.join(destination, artifact.filename);
+    fs.copyFileSync(artifact.tarballPath, target, fs.constants.COPYFILE_EXCL);
+  }
+  console.log('[native-hermes] immutable candidate SHA256:', candidateHash);
+  console.log('[native-hermes] candidate manifest SHA256:', exactCandidate.manifestSha256);
+} else {
+  const command = spawnSync(process.execPath, [path.join(repo, 'scripts/performance/native-shared-chunk-tarball-probe.cjs')], {
+    cwd: repo,
+    env: { ...process.env, VELLIRA_SHARED_TARBALL_OUTPUT: tarball },
+    stdio: 'inherit',
+  });
+  if (command.error || command.status !== 0) {
+    throw new Error(`Shared-graph candidate packaging failed: ${command.error?.message || command.status}`);
+  }
 }
 const pkg = {
   name: 'vellira-hermes-subpath-proof',
@@ -54,15 +126,15 @@ const pkg = {
     typecheck: 'tsc --noEmit',
   },
   dependencies: {
-    '@vellira-ui/react-native': 'file:./vellira-hermes-shared-candidate.tgz',
-    expo: '57.0.31',
-    '@expo/metro-runtime': '57.0.17',
-    react: '19.2.3',
-    'react-native': '0.86.3',
-    'react-native-svg': '15.15.4',
-    'react-native-safe-area-context': '5.9.1',
+    ...expoFixture.dependencies,
+    ...(exactCandidate
+      ? Object.fromEntries(exactCandidate.packages.map(p => [
+          p.name, 'file:./' + (p.name === '@vellira-ui/react-native'
+            ? 'vellira-hermes-shared-candidate.tgz' : p.filename),
+        ]))
+      : { '@vellira-ui/react-native': 'file:./vellira-hermes-shared-candidate.tgz' }),
   },
-  devDependencies: { typescript: '6.0.3', '@types/react': '19.2.4' },
+  devDependencies: expoFixture.devDependencies,
 };
 write('package.json', JSON.stringify(pkg, null, 2) + '\n');
 write('app.json', JSON.stringify({ expo: {
@@ -112,9 +184,10 @@ const sheetUI = sheetProof
 write('App.tsx', `import React from 'react';
 import { ${sheetProof ? 'LogBox, ' : ''}ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { Button as RootButton, ThemeProvider as RootProvider, useTheme as rootUseTheme${sheetProof ? ', Select' : ''} } from '@vellira-ui/react-native';
+import { Button as RootButton, ThemeProvider as RootProvider, useTheme as rootUseTheme } from '@vellira-ui/react-native';
 import { Button as SubpathButton } from '@vellira-ui/react-native/button';
 import { ThemeProvider as SubpathProvider, useTheme as subpathUseTheme } from '@vellira-ui/react-native/theme';
+${sheetProof ? "import { Select } from '@vellira-ui/react-native/select';" : ''}
 
 const hermesEnabled = !!(globalThis as typeof globalThis & { HermesInternal?: unknown }).HermesInternal;
 ${sheetProof ? '(globalThis as typeof globalThis & { __VELLIRA_SELECT_LAYOUT_PROOF__?: boolean }).__VELLIRA_SELECT_LAYOUT_PROOF__ = true;\nLogBox.ignoreLogs(["[VELLIRA_SELECT_LAYOUT]"]);' : ''}
@@ -201,15 +274,16 @@ const styles = StyleSheet.create({
 `);
 write('README.md', `# Vellira Hermes / React Native runtime proof — unpublished
 
-Generated locally for #1906 from workspace package ${packageVersion}; NOT a public release.
+Generated locally for #2082 from candidate version ${packageVersion}; NOT a public release.
+${exactTarball ? 'Installed from all five exact Native-related candidate tarballs, with verified integrity and no synthetic entry rewrites.' : 'Using historical unpublished shared-graph probe mode.'}
 
-The application installs exactly one disposable shared-graph npm tarball with root, button and theme from the same build. It does not request \`@react-native-picker/picker\` and installs with \`--legacy-peer-deps\` to avoid npm auto-installing mandatory peers.
+The application installs one coherent shared-graph native npm tarball with root, button, theme and optional Select subpaths. In exact-candidate mode its four internal Vellira dependencies are copied from the same candidate manifest. It does not request \`@react-native-picker/picker\`. ${exactTarball ? 'Use a normal npm install (legacy-peer-deps=false).' : 'The historical pre-removal probe uses --legacy-peer-deps.'}
 
 ## Test on iOS Simulator (requires Xcode, CocoaPods and a booted simulator)
 
 \`\`\`bash
 cd "${destination}"
-npm install --legacy-peer-deps --no-audit --no-fund
+${exactTarball ? 'npm install --no-audit --no-fund' : 'npm install --legacy-peer-deps --no-audit --no-fund'}
 npm run typecheck
 node -e "if(require('node:fs').existsSync('node_modules/@react-native-picker/picker'))throw Error('Unexpected picker auto-install')"
 npm run ios -- --device
@@ -224,5 +298,6 @@ No production exports, npm version, repository dependencies, or application file
 `);
 console.log('[native-hermes] project:', destination);
 console.log('[native-hermes] source package:', packageVersion);
+console.log('[native-hermes] toolchain:', expoFixture.profile, expoFixture.lockSha256 ?? 'legacy-pinned');
 console.log('[native-hermes] candidate tarball:', tarball);
-console.log('[native-hermes] next: cd ' + JSON.stringify(destination) + ' && npm install --legacy-peer-deps --no-audit --no-fund && npm run typecheck && npm run ios -- --device');
+console.log('[native-hermes] next: cd ' + JSON.stringify(destination) + ' && ' + (exactTarball ? 'npm install --no-audit --no-fund' : 'npm install --legacy-peer-deps --no-audit --no-fund') + ' && npm run typecheck && npm run ios -- --device');
