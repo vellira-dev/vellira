@@ -1,3 +1,10 @@
+import Image from 'next/image';
+
+import desktopLight from './desktop-light.png';
+import mobileLight from './mobile-light.png';
+import mobileDark from './mobile-dark.png';
+import mobileHighContrast from './mobile-high-contrast.png';
+
 A product website can easily drift away from the product it is supposed to explain. That risk is especially high when a React website needs to demonstrate a React Native application: rebuilding the mobile UI in web components is convenient, but the preview can quietly become a second implementation with different states, different behavior, and different maintenance costs.
 
 Vellira took a narrower approach for its Native Starter showcase. The desktop demo remains the real React Web dashboard, while the Mobile preview is generated from the canonical Expo Native Starter source and adapted only at the browser boundary. A follow-up change then synchronized the isolated mobile preview with the website's active theme.
@@ -74,6 +81,22 @@ The result is a narrower integration surface: canonical product source on one si
 
 The desktop and mobile states deliberately represent different runtimes. The desktop tab shows Vellira's real React Web dashboard; the Mobile tab embeds a browser-hosted projection of Expo Native Starter.
 
+<Image
+  src={desktopLight}
+  alt='Vellira Platforms page in light mode with Desktop selected, showing the full React Web Dashboard Starter with project totals and charts.'
+  sizes='(max-width: 760px) 100vw, 760px'
+/>
+
+*Desktop: the React Web dashboard remains its own application surface.*
+
+<Image
+  src={mobileLight}
+  alt='Vellira Platforms page in light mode with Mobile selected, showing the Expo Native Starter inside a phone-shaped browser preview.'
+  sizes='(max-width: 760px) 100vw, 760px'
+/>
+
+*Mobile: the source-synchronized Expo Native Starter appears inside the site's phone preview.*
+
 The implementation follows a compact, auditable path:
 
 ```text
@@ -139,6 +162,26 @@ The iframe page begins with `ready = false` and renders nothing until that effec
 This maps website `light` and `dark` directly, `high-contrast` to native `highContrast`, and website `system` to the parent's already resolved Light or Dark value. Storage failures are caught, so the bridge does not promise persistence in environments that deny it.
 
 The distinction is architectural: the website initializes a theme value for an isolated preview; it does not own the Native Starter's internal theme behavior.
+
+The following are **unaltered captures of the real Vellira website**, with the Mobile tab selected. Compare them with the light-mode capture above: the phone's embedded app changes along with the surrounding page.
+
+<Image
+  src={mobileDark}
+  alt='Vellira Mobile Native Starter browser preview and surrounding website both shown in dark mode; project status cards and progress remain visible.'
+  sizes='(max-width: 760px) 100vw, 760px'
+/>
+
+*Dark: the website and the isolated Native Starter preview render their dark appearance.*
+
+<Image
+  src={mobileHighContrast}
+  alt='Vellira Mobile Native Starter browser preview in high-contrast mode with strong card outlines against a black background.'
+  sizes='(max-width: 760px) 100vw, 760px'
+/>
+
+*High Contrast: the preview reflects the website's high-contrast selection.*
+
+These screenshots show the visual states, **not** a claim of WCAG compliance or equivalent native-device behavior.
 
 ## Test the synchronization contract, not just the screenshot
 
