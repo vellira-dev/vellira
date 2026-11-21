@@ -116,7 +116,8 @@ function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
     if (!finite(x, 1e9)) return invalid('invalid-x', `${path}.x`);
     if (x <= previousX) return invalid('non-increasing-x', `${path}.x`);
     previousX = x;
-    if (!axisLabelValid(xLabel)) return invalid('invalid-x-label', `${path}.xLabel`);
+    if (!axisLabelValid(xLabel))
+      return invalid('invalid-x-label', `${path}.xLabel`);
     if (!record(values)) return invalid('invalid-values', `${path}.values`);
     if (!fields(values, Array.from(ids)))
       return invalid('series-key-mismatch', `${path}.values`);
