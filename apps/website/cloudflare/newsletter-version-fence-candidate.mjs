@@ -59,6 +59,8 @@ export class NewsletterVersionFenceCandidate {
       // A cooperative legacy writer must not run after this transaction
       // commits. The first transition always consumes today's entire budget.
       const fixed = await txn.get('fixed-utc-v1');
+      // Fixed state without a version marker is an inconsistent cutover.
+      if (fixed !== undefined) return 'unavailable';
       const legacy = await txn.get('rolling-v1');
       const result = transitionFixedUtcBudget({
         fixed,
