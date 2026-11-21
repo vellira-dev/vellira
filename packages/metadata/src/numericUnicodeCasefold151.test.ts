@@ -81,7 +81,7 @@ describe('pinned Unicode 15.1 full casefold (proposed Numeric contract)', () => 
     );
   });
 
-  it.each(['January  2026', ' A', 'A\\tB', 'A\\u00a0B'])(
+  it.each(['January  2026', ' A', 'A\tB', 'A\u00a0B'])(
     'preserves previous x-axis label acceptance for %j',
     (xLabel) => {
       const input = {
