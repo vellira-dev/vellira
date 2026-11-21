@@ -190,6 +190,31 @@ export async function getCurrentAccountEmail(
   );
 }
 
+// Authenticated, read-only deletion request status; this never grants authority
+// to initiate an account deletion or implies that physical erasure occurred.
+export type AccountDeletionRequestStatus = 'none' | 'pending_review';
+
+export async function getAccountDeletionRequestStatus(
+  signal?: AbortSignal
+): Promise<AccountDeletionRequestStatus> {
+  const response: unknown = await apiRequest<unknown>(
+    '/v1/auth/account/deletion/status',
+    { signal }
+  );
+  if (!response || typeof response !== 'object' || !('deletion' in response)) {
+    throw new Error('Invalid deletion status response');
+  }
+  const deletion = response.deletion;
+  if (!deletion || typeof deletion !== 'object' || !('status' in deletion)) {
+    throw new Error('Invalid deletion status response');
+  }
+  const status = deletion.status;
+  if (status !== 'none' && status !== 'pending_review') {
+    throw new Error('Invalid deletion status response');
+  }
+  return status;
+}
+
 function readAccountProfile(payload: unknown): AccountProfile {
   if (!payload || typeof payload !== 'object' || !('profile' in payload)) {
     throw new Error('Invalid account profile response');

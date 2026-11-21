@@ -1,22 +1,77 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { Button, Modal, Portal } from '@vellira-ui/react';
+import { Button, Modal, Portal, Select } from '@vellira-ui/react';
 
+import {
+  getAccountDeletionRequestStatus,
+  type AccountDeletionRequestStatus,
+} from './api';
 import { localAccountPreview, useAppSession } from './AppSession';
 
 import profileStyles from './AccountProfilePanel.module.css';
 import styles from './AccountDeletionPanel.module.css';
 
-// Account deletion has no authorized backend contract yet (#196). This card
-// never calls an API or mutates account state. Only the explicit local
-// development fixture can open the non-mutating confirmation preview.
+// The only production request is an authenticated GET for status.
+// Creating or completing an account deletion remains disabled; the local
+// development fixture alone can open a non-mutating confirmation preview.
+type DeletionRead =
+  | { kind: 'loading' | 'error'; userId: string; revision: number }
+  | {
+      kind: 'ready';
+      userId: string;
+      revision: number;
+      value: AccountDeletionRequestStatus;
+    };
+
 export function AccountDeletionPanel() {
   const { me, status } = useAppSession();
   const userId = me?.id ?? '';
   const previewEnabled = localAccountPreview && status === 'ready' && !!userId;
+  const [revision, setRevision] = useState(0);
   const [dialogUserId, setDialogUserId] = useState<string | null>(null);
+  const [previewStatus, setPreviewStatus] =
+    useState<AccountDeletionRequestStatus>('none');
+  const [storedRead, setStoredRead] = useState<DeletionRead>({
+    kind: 'loading',
+    userId: '',
+    revision: 0,
+  });
+
+  useEffect(() => {
+    // This is a read-only session-scoped view, never a deletion request.
+    // The local design fixture must not make real backend requests.
+    if (localAccountPreview || status !== 'ready' || !userId) return;
+
+    const abort = new AbortController();
+    void getAccountDeletionRequestStatus(abort.signal)
+      .then((value) => {
+        if (!abort.signal.aborted) {
+          setStoredRead({ kind: 'ready', userId, revision, value });
+        }
+      })
+      .catch(() => {
+        if (!abort.signal.aborted) {
+          setStoredRead({ kind: 'error', userId, revision });
+        }
+      });
+
+    return () => abort.abort();
+  }, [status, userId, revision]);
+
+  // Never display the previous account's status while the current session
+  // or a retry is resolving, including during the render before effects run.
+  const visibleRead: DeletionRead =
+    status === 'ready' &&
+    !!userId &&
+    storedRead.userId === userId &&
+    storedRead.revision === revision
+      ? storedRead
+      : { kind: 'loading', userId, revision };
+  const displayRead: DeletionRead = previewEnabled
+    ? { kind: 'ready', userId, revision, value: previewStatus }
+    : visibleRead;
   const previewOpen = previewEnabled && dialogUserId === userId;
 
   return (
@@ -88,6 +143,57 @@ export function AccountDeletionPanel() {
           )}
         </Modal>
       </div>
+      {previewEnabled && (
+        <div className={styles.previewControls} data-deletion-status-preview>
+          <Select
+            label='Preview request status'
+            value={previewStatus}
+            size='md'
+            onValueChange={(value) => {
+              if (value === 'none' || value === 'pending_review') {
+                setPreviewStatus(value);
+              }
+            }}
+          >
+            <Select.Item value='none'>No request</Select.Item>
+            <Select.Item value='pending_review'>Pending review</Select.Item>
+          </Select>
+          <p>Local preview only. No status request is sent to Vellira.</p>
+        </div>
+      )}
+      {status === 'ready' && !!userId && (
+        <div className={styles.requestStatus} data-account-deletion-status>
+          {displayRead.kind === 'loading' && (
+            <p role='status'>Checking deletion request status…</p>
+          )}
+          {displayRead.kind === 'ready' && displayRead.value === 'none' && (
+            <p role='status'>No deletion request is pending.</p>
+          )}
+          {displayRead.kind === 'ready' &&
+            displayRead.value === 'pending_review' && (
+              <p role='status'>
+                Deletion request pending review. Your account remains active; no
+                data has been erased.
+              </p>
+            )}
+          {displayRead.kind === 'error' && (
+            <div className={styles.statusError}>
+              <p role='alert'>
+                Deletion request status is temporarily unavailable.
+              </p>
+              <Button
+                type='button'
+                appearance='link'
+                color='neutral'
+                size='sm'
+                onClick={() => setRevision((current) => current + 1)}
+              >
+                Retry status
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       <p id='account-deletion-help' className={styles.help}>
         {previewEnabled
           ? 'Demo only — this action cannot delete an account.'

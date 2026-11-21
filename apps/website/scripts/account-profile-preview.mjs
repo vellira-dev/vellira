@@ -95,6 +95,23 @@ try {
   await danger.getByRole('heading', { name: 'Danger zone' }).waitFor();
   const deleteTrigger = danger.getByRole('button', { name: 'Delete account', exact: true });
   assert.equal(await deleteTrigger.isEnabled(), true, 'Only local preview may open the explanatory dialog');
+  // The status selector is a local visual fixture. It does not query or
+  // create any account deletion request, and uses the same read-only UI copy.
+  const previewStatus = danger.getByRole('combobox', { name: 'Preview request status' });
+  await previewStatus.waitFor();
+  await danger.getByText('No deletion request is pending.', { exact: true }).waitFor();
+  assert.equal(await danger.locator('[data-account-deletion-status]').count(), 1);
+  assert.ok((await danger.locator('[data-deletion-status-preview]').textContent())
+    .includes('Local preview only'));
+  await previewStatus.click();
+  await page.getByRole('option', { name: 'Pending review' }).click();
+  await danger.getByText('Deletion request pending review.', { exact: false }).waitFor();
+  assert.ok((await danger.locator('[data-account-deletion-status]').textContent())
+    .includes('no data has been erased'));
+  await previewStatus.click();
+  await page.getByRole('option', { name: 'No request' }).click();
+  await danger.getByText('No deletion request is pending.', { exact: true }).waitFor();
+  assert.equal(backendRequests.length, 0, 'Status preview must make zero backend calls');
   const dangerLayout = await page.evaluate(() => {
     const profile = document.querySelector('[data-profile-settings]');
     const preferences = profile?.querySelector('[data-account-block="preferences"]');
