@@ -52,6 +52,7 @@ export async function verifyCloudflareDeploymentReadOnly({
     stagingRunId,
     stagingRunAttempt,
     githubGet,
+    allowVerifiedReleaseSyncAdvance: true,
   });
   assert.equal(staging.status, 'runtime-identity-verified');
   const base = '/accounts/' + accountId + '/workers/scripts/' + SCRIPT_NAME + '/deployments';
@@ -72,10 +73,11 @@ export async function verifyCloudflareDeploymentReadOnly({
   });
   // Prevent old evidence from being accepted after main advances during API reads.
   const latest = await githubGet('/repos/' + OWNER + '/git/ref/heads/main');
-  assert.equal(latest.object?.sha, candidateSha, 'Main advanced during Cloudflare verification');
+  assert.equal(latest.object?.sha, staging.verifiedMainSha ?? candidateSha, 'Main advanced during Cloudflare verification');
   return {
     status: 'active-cloudflare-deployment-verified',
     sourceSha: candidateSha,
+    verifiedMainSha: staging.verifiedMainSha ?? candidateSha,
     buildId: staging.buildId,
     ...remote,
     note: 'Read-only deployment identity only; not full staging acceptance or production authorization',
