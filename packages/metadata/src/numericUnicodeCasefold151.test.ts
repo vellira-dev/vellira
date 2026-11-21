@@ -40,11 +40,25 @@ describe('pinned Unicode 15.1 full casefold (proposed Numeric contract)', () => 
     ['İ', 'i\u0307'],
     ['ς', 'σ'],
     ['ﬃ', 'ffi'],
-  ])('uses full mappings rather than simple JavaScript lowercase: %s', (a, folded) => {
-    expect(fullCasefoldUnicode151(a)).toBe(folded);
-  });
+  ])(
+    'uses full mappings rather than simple JavaScript lowercase: %s',
+    (a, folded) => {
+      expect(fullCasefoldUnicode151(a)).toBe(folded);
+    }
+  );
 
-  it.each(['A  B', ' A', 'A ', 'A\tB', 'A\nB', 'A\u00a0B', 'A\u200bB', 'A\u200dB', 'A\x00B', ''])(
+  it.each([
+    'A  B',
+    ' A',
+    'A ',
+    'A\\tB',
+    'A\\nB',
+    'A\\u00a0B',
+    'A\\u200bB',
+    'A\\u200dB',
+    'A\\x00B',
+    '',
+  ])(
     'rejects noncanonical or invisible label %j in public validator',
     (label) => {
       expect(isCanonicalNumericLabelUnicode151(label)).toBe(false);
@@ -62,13 +76,21 @@ describe('pinned Unicode 15.1 full casefold (proposed Numeric contract)', () => 
     expect(result.ok).toBe(true);
     expect(input.series[1]?.label).toBe(original);
     expect(numericLabelKeyUnicode151(original)).toBe('é');
-    expect(numericLabelKeyUnicode151('e')).not.toBe(numericLabelKeyUnicode151('é'));
+    expect(numericLabelKeyUnicode151('e')).not.toBe(
+      numericLabelKeyUnicode151('é')
+    );
   });
 
   it('preserves existing safety and numeric grammar HOLD', async () => {
-    const { compileComponentProgram } = await import('../../../scripts/component-program/compile');
-    const { componentProgramSource } = await import('../../../scripts/component-program/source');
-    const { mediaSpec, mediaProgram } = await import('../../../scripts/component-program/fixtures/programs');
+    const { compileComponentProgram } = await import(
+      '../../../scripts/component-program/compile'
+    );
+    const { componentProgramSource } = await import(
+      '../../../scripts/component-program/source'
+    );
+    const { mediaSpec, mediaProgram } = await import(
+      '../../../scripts/component-program/fixtures/programs'
+    );
     const source = componentProgramSource(mediaSpec());
     const decisions = mediaProgram();
     const output = compileComponentProgram(source, {
