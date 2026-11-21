@@ -345,10 +345,19 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
+      - name: Set up pnpm for locked harness dependencies
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
       - name: Set up consumer Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22.23.4
+
+      # The native subpath closure validator parses JS with TypeScript.
+      # Install harness tooling from the pinned workspace lockfile; the clean
+      # Expo consumer still installs exact candidate tarballs independently.
+      - name: Install locked Expo proof harness tooling
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Download exact retained npm candidate
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.1

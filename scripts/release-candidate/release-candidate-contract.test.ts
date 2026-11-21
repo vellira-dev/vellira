@@ -22,7 +22,10 @@ describe('release candidate artifact wiring', () => {
   });
 
   it('requires the complete shared Native graph from one canonical source', () => {
-    const shared = readFileSync('packages/react-native/tsdown.config.ts', 'utf8');
+    const shared = readFileSync(
+      'packages/react-native/tsdown.config.ts',
+      'utf8'
+    );
     const workflow = readFileSync(
       '.github/workflows/release-candidate-proof.yml',
       'utf8'
@@ -35,7 +38,9 @@ describe('release candidate artifact wiring', () => {
     );
 
     expect(Object.keys(subpaths)).toHaveLength(17);
-    expect(shared).toContain("new URL('./native-subpaths.json', import.meta.url)");
+    expect(shared).toContain(
+      "new URL('./native-subpaths.json', import.meta.url)"
+    );
     expect(shared).toContain('codeSplitting: true');
     expect(pkg.exports['.']['react-native']).toBe('./dist/index.js');
     expect(pkg.files).toContain('dist/**/*.js');
