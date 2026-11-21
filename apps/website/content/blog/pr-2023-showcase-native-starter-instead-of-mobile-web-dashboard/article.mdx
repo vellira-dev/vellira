@@ -4,6 +4,7 @@ import desktopLight from './desktop-light.png';
 import mobileLight from './mobile-light.png';
 import mobileDark from './mobile-dark.png';
 import mobileHighContrast from './mobile-high-contrast.png';
+import screenshots from './screenshots.module.css';
 
 A product website can easily drift away from the product it is supposed to explain. That risk is especially high when a React website needs to demonstrate a React Native application: rebuilding the mobile UI in web components is convenient, but the preview can quietly become a second implementation with different states, different behavior, and different maintenance costs.
 
@@ -84,6 +85,7 @@ The desktop and mobile states deliberately represent different runtimes. The des
 <Image
   src={desktopLight}
   alt='Vellira Platforms page in light mode with Desktop selected, showing the full React Web Dashboard Starter with project totals and charts.'
+  className={screenshots.screenshot}
   sizes='(max-width: 760px) 100vw, 760px'
 />
 
@@ -92,6 +94,7 @@ The desktop and mobile states deliberately represent different runtimes. The des
 <Image
   src={mobileLight}
   alt='Vellira Platforms page in light mode with Mobile selected, showing the Expo Native Starter inside a phone-shaped browser preview.'
+  className={screenshots.screenshot}
   sizes='(max-width: 760px) 100vw, 760px'
 />
 
@@ -168,6 +171,7 @@ The following are **unaltered captures of the real Vellira website**, with the M
 <Image
   src={mobileDark}
   alt='Vellira Mobile Native Starter browser preview and surrounding website both shown in dark mode; project status cards and progress remain visible.'
+  className={screenshots.screenshot}
   sizes='(max-width: 760px) 100vw, 760px'
 />
 
@@ -176,6 +180,7 @@ The following are **unaltered captures of the real Vellira website**, with the M
 <Image
   src={mobileHighContrast}
   alt='Vellira Mobile Native Starter browser preview in high-contrast mode with strong card outlines against a black background.'
+  className={screenshots.screenshot}
   sizes='(max-width: 760px) 100vw, 760px'
 />
 
