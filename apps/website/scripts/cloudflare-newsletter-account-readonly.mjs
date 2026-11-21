@@ -377,6 +377,62 @@ export async function auditCloudflareNewsletterAccount({
       : { status: 'incomplete' };
   }
 
+  // Collect the owner's actual traffic-serving version inventory using only
+  // GET requests. Version metadata is NOT a verifiable source-code attestation:
+  // older rolling code may ignore cooperative cutover markers. Never report
+  // remote safety from version counts, binding names or class names alone.
+  let ownerServingVersions = {
+    status: 'unverified',
+    sourceIdentity: 'unverified',
+    exclusiveCooperative: false,
+  };
+  if (workerPresence[OWNER] === 'present') {
+    const reply = await get(root + '/workers/scripts/' + OWNER + '/deployments');
+    if (reply.status !== 'available') {
+      ownerServingVersions = {
+        ...ownerServingVersions,
+        status: reply.status,
+      };
+    } else {
+      const deployments = reply.payload.result?.deployments;
+      const versions = deployments?.[0]?.versions;
+      if (!Array.isArray(deployments) || !validTrafficSplit(versions)) {
+        ownerServingVersions = {
+          ...ownerServingVersions,
+          status: 'incomplete',
+        };
+      } else {
+        let complete = true;
+        for (const version of versions) {
+          const detail = await get(
+            root + '/workers/scripts/' + OWNER + '/versions/' + version.version_id
+          );
+          if (detail.status !== 'available' || !isObject(detail.payload.result)) {
+            complete = false;
+            break;
+          }
+        }
+        ownerServingVersions = complete
+          ? {
+              status: 'observed',
+              servingVersionCount: versions.length,
+              multipleServingVersions: versions.length > 1,
+              sourceIdentity: 'unverified',
+              exclusiveCooperative: false,
+            }
+          : {
+              ...ownerServingVersions,
+              status: 'incomplete',
+            };
+      }
+    }
+  } else if (workerPresence[OWNER] === 'absent') {
+    ownerServingVersions = {
+      ...ownerServingVersions,
+      status: 'not_deployed',
+    };
+  }
+
   const domainReply = await get(root + '/workers/domains');
   let domainInventoryStatus = domainReply.status;
   let domainInventoryDiagnostic = domainReply.status === 'incomplete' ? 'response_uninspectable' : null;
@@ -486,6 +542,7 @@ export async function auditCloudflareNewsletterAccount({
     coordinatorClassNamespaceCount: coordinatorNamespaces,
     workerDev,
     liveBinding,
+    ownerServingVersions,
     domainInventoryStatus,
     domainInventoryDiagnostic,
     domains,
