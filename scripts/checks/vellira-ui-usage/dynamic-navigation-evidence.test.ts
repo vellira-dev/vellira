@@ -104,6 +104,17 @@ function validDemoSource(source: string): boolean {
   );
 }
 
+function validCanonicalLinkSource(source: string): boolean {
+  return (
+    source.includes('if (!href) return <>{children}</>;') &&
+    source.includes("const internal = href.startsWith('/');") &&
+    source.includes(
+      '<NextLink href={href} prefetch={prefetch} target={target} rel={rel}>'
+    ) &&
+    source.includes('href={href}')
+  );
+}
+
 describe('dynamic website navigation evidence (source contracts)', () => {
   it('keeps release URL in the fixed GitHub releases namespace', () => {
     const source = sourceOf('sections/home/Roadmap/Roadmap.tsx');
@@ -157,15 +168,24 @@ describe('dynamic website navigation evidence (source contracts)', () => {
 
   it('keeps canonical link fail-closed for missing href and routes internal links', () => {
     const source = sourceOf('components/navigation/DesignSystemLink.tsx');
-    const required = [
-      'if (!href) return <>{children}</>;',
-      "const internal = href.startsWith('/');",
-      '<NextLink href={href} prefetch={prefetch} target={target} rel={rel}>',
-      'href={href}',
-    ];
-    for (const expression of required) {
-      expect(source.includes(expression)).toBe(true);
-      expect(source.replaceAll(expression, '')).not.toContain(expression);
-    }
+    expect(validCanonicalLinkSource(source)).toBe(true);
+    expect(
+      validCanonicalLinkSource(
+        source.replace('if (!href) return <>{children}</>;', '')
+      )
+    ).toBe(false);
+    expect(
+      validCanonicalLinkSource(
+        source.replace("const internal = href.startsWith('/');", '')
+      )
+    ).toBe(false);
+    expect(
+      validCanonicalLinkSource(
+        source.replace(
+          '<NextLink href={href} prefetch={prefetch} target={target} rel={rel}>',
+          '<NextLink href={href}>'
+        )
+      )
+    ).toBe(false);
   });
 });
