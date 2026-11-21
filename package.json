@@ -1,7 +1,7 @@
 {
   "name": "vellira",
   "private": true,
-  "version": "2.191.7",
+  "version": "2.192.11",
   "description": "Vellira Design System monorepo",
   "type": "module",
   "author": "Roman Bakurov",
@@ -130,7 +130,7 @@
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^9.39.4",
-    "@lhci/cli": "0.15.1",
+    "@lhci/cli": "0.16.1",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/github": "^12.0.10",

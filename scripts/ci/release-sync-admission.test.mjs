@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BASELINE_CHECKS, STARTER_CHECKS, classifyAdmission, assessCheckRuns }
+import { BASELINE_CHECKS, STARTER_CHECKS, RELEASE_CONSUMER_CHECKS, classifyAdmission, assessCheckRuns }
   from './release-sync-admission.mjs';
 
 const fileSet = [
@@ -28,7 +28,7 @@ test('regular PR is cheap pass-through', () => {
 test('atomic release requires baseline plus Native/Starter proofs', () => {
   const got = classifyAdmission(trusted, fileSet);
   assert.equal(got.kind, 'release');
-  assert.deepEqual(got.checks, [...BASELINE_CHECKS,...STARTER_CHECKS]);
+  assert.deepEqual(got.checks, [...BASELINE_CHECKS,...STARTER_CHECKS,...RELEASE_CONSUMER_CHECKS]);
 });
 test('seven manifest release path has no path-filtered Native requirement', () => {
   const got = classifyAdmission(trusted, fileSet.slice(0,7));
@@ -59,6 +59,30 @@ test('missing, skipped, neutral, failure and pending never admit', () => {
   assert.deepEqual(assessCheckRuns([{...complete[0],status:'in_progress'},complete[1]],names)
     .pending,['migration-preflight']);
 });
+test('failed clean Expo consumer blocks atomic release even when all other gates pass', () => {
+  const names=classifyAdmission(trusted,fileSet).checks;
+  assert.ok(names.includes('Clean Expo consumer'));
+  const complete=names.map((name,id)=>({name,id:id+1,status:'completed',
+    conclusion:'success',started_at:'2026-11-19T12:00:00Z',
+    app:{slug:name==='CodeQL'?'github-advanced-security':'github-actions'}}));
+  assert.equal(assessCheckRuns(complete,names).success,true);
+  const failed=complete.map(x=>x.name==='Clean Expo consumer'?
+    {...x,conclusion:'failure'}:x);
+  assert.deepEqual(assessCheckRuns(failed,names).failed,['Clean Expo consumer: failure']);
+  assert.equal(assessCheckRuns(failed,names).success,false);
+  const missing=complete.filter(x=>x.name!=='Clean Expo consumer');
+  assert.deepEqual(assessCheckRuns(missing,names).pending,['Clean Expo consumer']);
+});
+
+test('Starter-only sync does not require path-filtered release candidate consumers', () => {
+  const p={...trusted,title:'chore(starter): sync Vellira to v2.190.12',
+    head:{ref:'chore/workspace-starter-release-sync'}};
+  const checks=classifyAdmission(p,fileSet.slice(7)).checks;
+  assert.ok(checks.includes('expo-clean-room'));
+  assert.ok(!checks.includes('Clean Expo consumer'));
+  assert.ok(!checks.includes('Clean docs first-use'));
+});
+
 test('source app spoofing never grants success', () => {
   const run={name:'migration-preflight',id:1,status:'completed',conclusion:'success',
     app:{slug:'untrusted-app'},started_at:'2026-11-04T10:00:00Z'};

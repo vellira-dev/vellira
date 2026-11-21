@@ -357,6 +357,24 @@ export function compileComponentProgram(
       );
       return blocked();
     }
+    // Numeric modules remain unadmitted even through a custom registry's
+    // implication closure. Reject any registry defining reserved Numeric IDs.
+    for (const id of [
+      'bounded-numeric-series',
+      'numeric-data-geometry',
+    ] as const) {
+      if (
+        !parsed.modules.some((selection) => selection.id === id) &&
+        !registry.some((module) => module.id === id)
+      )
+        continue;
+      finding(
+        'missing-grammar-capability',
+        id,
+        'Numeric modules require reviewed Program and independent proof admission.'
+      );
+    }
+    if (findings.length) return blocked();
     const decisions: ComponentProgramDecisionsV1 = {
       ...parsed,
       anatomy: sorted(parsed.anatomy),

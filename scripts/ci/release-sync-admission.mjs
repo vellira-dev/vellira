@@ -18,6 +18,13 @@ export const STARTER_CHECKS = Object.freeze([
   'Analyze (actions)', 'Analyze (javascript-typescript)'
 ]);
 
+// Only atomic release PRs trigger the path-filtered Release Candidate Proof.
+// Standalone Starter sync PRs must not wait for checks their workflow cannot run.
+export const RELEASE_CONSUMER_CHECKS = Object.freeze([
+  'Clean Vite consumer', 'Clean Next.js consumer', 'Clean Expo consumer',
+  'Clean docs first-use'
+]);
+
 const STARTER_FILES = new Set([
   'examples/workspace-starter/README.md',
   'examples/workspace-starter/native/package.json',
@@ -28,11 +35,15 @@ const STARTER_FILES = new Set([
 
 export function classifyAdmission(pr, files) {
   assert.ok(pr && Array.isArray(files), 'Missing exact PR and file evidence');
-  const release = pr.title === 'chore(release): sync package versions' ||
-    pr.head.ref.startsWith('chore/sync-release-') ||
-    pr.user.login === 'vellira-release-sync[bot]';
   const starter = pr.head.ref === 'chore/workspace-starter-release-sync' ||
     pr.title.startsWith('chore(starter): sync Vellira to v');
+  // The trusted bot also authors Starter-only syncs. A bot identity alone
+  // must not classify them as atomic release PRs with path-filtered gates.
+  const release = !starter && (
+    pr.title === 'chore(release): sync package versions' ||
+    pr.head.ref.startsWith('chore/sync-release-') ||
+    pr.user.login === 'vellira-release-sync[bot]'
+  );
   if (!release && !starter) return { kind: 'other', checks: [] };
   assert.equal(pr.user.login, 'vellira-release-sync[bot]', 'Untrusted sync PR author');
   assert.equal(pr.base.ref, 'main', 'Sync PR target must be main');
@@ -57,7 +68,8 @@ export function classifyAdmission(pr, files) {
   if (native !== web) throw new Error('Atomic Starter sync must include both Web and Native');
   return {
     kind: starter ? 'starter' : 'release',
-    checks: [...BASELINE_CHECKS, ...(native ? STARTER_CHECKS : [])]
+    checks: [...BASELINE_CHECKS, ...(native ? STARTER_CHECKS : []),
+      ...(native && release ? RELEASE_CONSUMER_CHECKS : [])]
   };
 }
 

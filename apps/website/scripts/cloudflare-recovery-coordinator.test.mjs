@@ -1,11 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideRecovery } from './cloudflare-recovery-coordinator.mjs';
+import {
+  decideRecovery,
+  reconcileSkippedStagingEquivalence,
+  assertCompleteRecoveryHistory,
+  fetchCandidateProductionRuns,
+  observedMainPushAt,
+  fetchActiveProductionRuns,
+} from './cloudflare-recovery-coordinator.mjs';
+import {
+  assessFreshProductionCandidate,
+  ProductionCandidateSupersededError,
+} from './cloudflare-production-freshness.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
 const now = Date.parse('2026-11-01T13:00:00Z');
-const base = { mainSha: b, productionSha: a, stagingRuns: [], productionRuns: [], nowMs: now };
+const base = { mainSha: b, productionSha: a, stagingRuns: [], productionRuns: [], nowMs: now, mainUpdatedAt: '2026-11-01T12:55:00Z' };
 const stage = {
   id: 123,
   head_sha: b,
@@ -125,21 +136,193 @@ test('does not restart a pending staging run', () => {
   }).dispatch, false);
 });
 
-test('release-sync push with skipped deploy never triggers an automatic second staging deploy', () => {
+test('release-sync-only skipped staging cannot trigger another automatic staging deploy', () => {
   assert.deepEqual(decideRecovery({
     ...base,
     stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false }],
   }), { dispatch: false, reason: 'skipped_staging_requires_review' });
 });
 
-test('skipped release-sync cannot hide a successful fully verified staging run', () => {
-  assert.equal(decideRecovery({
+test('verified deployed release-sync equivalence closes skipped staging without dispatch', async () => {
+  const plan = decideRecovery({
     ...base,
-    stagingRuns: [
-      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
-      stage,
-    ],
-  }).target, 'production');
+    stagingRuns: [{
+      head_sha: b, event: 'push', status: 'completed',
+      conclusion: 'success', fullStage: false,
+    }],
+  });
+  assert.equal(plan.reason, 'skipped_staging_requires_review');
+  let options;
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async (input) => {
+      options = input;
+      return {
+        checked: true, mode: 'staging', mainSha: b,
+        deploymentEquivalent: true, changedPaths: ['package.json'],
+        relevantPaths: [],
+      };
+    },
+  });
+  assert.deepEqual(result, {
+    dispatch: false,
+    reason: 'already_deployed_equivalent',
+    deployedSha: a,
+    equivalentMainSha: b,
+  });
+  assert.equal(options.candidateSha, a, 'Proof must bind to the live runtime SHA');
+  assert.equal(options.mainSha, b, 'Proof must bind to exact current main');
+  assert.equal(options.repository, 'vellira-dev/vellira');
+  assert.equal(options.candidateSource, 'staging');
+});
+
+test('deployment-relevant changes retain skipped-staging block', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const notices = [];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    log: (message) => notices.push(message),
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('runtime files changed', {
+        candidateSha: a,
+        mainSha: b,
+        relevantPaths: ['apps/website/app/page.tsx'],
+      });
+    },
+  });
+  assert.strictEqual(result, plan);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0], /^::notice::Production convergence blocked:/);
+  assert.ok(notices[0].includes(a));
+  assert.ok(notices[0].includes(b));
+  assert.ok(notices[0].includes('apps/website/app/page.tsx'));
+});
+
+test('blocked recovery notice bounds and escapes untrusted paths', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const notices = [];
+  const paths = [
+    'apps/website/unsafe%0A\n::error::injected',
+    ...Array.from({ length: 11 }, (_, index) => `apps/website/path-${index}`),
+  ];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    log: (message) => notices.push(message),
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('stale', {
+        candidateSha: a, mainSha: b, relevantPaths: paths,
+      });
+    },
+  });
+  assert.strictEqual(result, plan);
+  assert.equal(notices.length, 1);
+  assert.ok(notices[0].startsWith('::notice::'));
+  assert.ok(notices[0].includes('deployment-relevant paths (12)'));
+  assert.ok(notices[0].includes('(+4 more)'));
+  assert.ok(notices[0].includes('%250A'), 'Percent escapes must be escaped');
+  assert.equal(notices[0].includes('\n'), false, 'Must not inject a second workflow command');
+  assert.equal(notices[0].includes('apps/website/path-7'), false);
+  assert.ok(notices[0].length < 1500, 'Annotation must remain bounded');
+});
+
+test('other recovery decisions never invoke release-sync equivalence proof', async () => {
+  const plan = decideRecovery(base);
+  assert.strictEqual(await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async () => { throw new Error('Must not fetch'); },
+  }), plan);
+});
+
+test('multi-commit website drift plus atomic release-sync must keep recovery blocked', async () => {
+  // Real-world pattern: production A, an intervening engineering change, then
+  // an authenticated release-sync-only main B whose staging deploy was skipped.
+  // A combined compare is NOT a single release-sync and must never inherit
+  // the atomic-sync exception.
+  const skipped = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const fetched = [];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan: skipped, mainSha: b, productionSha: a,
+    assess: (options) => assessFreshProductionCandidate({
+      ...options,
+      githubToken: 'fixture-token',
+      fetchImpl: async (url) => {
+        fetched.push(String(url));
+        assert.match(String(url), /\/compare\//);
+        return new Response(JSON.stringify({
+          status: 'ahead',
+          ahead_by: 3,
+          behind_by: 0,
+          total_commits: 3,
+          files: [
+            { filename: 'package.json', status: 'modified' },
+            { filename: 'examples/workspace-starter/web/package.json', status: 'modified' },
+            { filename: 'scripts/ci/release-sync-admission.mjs', status: 'modified' },
+          ],
+        }), { status: 200 });
+      },
+    }),
+  });
+  assert.strictEqual(result, skipped);
+  assert.equal(fetched.length, 1, 'No candidate manifest read can authorize mixed commit drift');
+});
+
+test('diverged or incomplete GitHub compare fails closed without a no-op decision', async () => {
+  const skipped = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  for (const comparison of [
+    { status: 'diverged', files: [] },
+    { status: 'ahead' },
+  ]) {
+    await assert.rejects(reconcileSkippedStagingEquivalence({
+      plan: skipped, mainSha: b, productionSha: a,
+      assess: (options) => assessFreshProductionCandidate({
+        ...options,
+        githubToken: 'fixture-token',
+        fetchImpl: async () => new Response(JSON.stringify(comparison), { status: 200 }),
+      }),
+    }));
+  }
+});
+
+test('stale evidence exception with mismatched source SHA fails closed', async () => {
+  await assert.rejects(reconcileSkippedStagingEquivalence({
+    plan: { dispatch: false, reason: 'skipped_staging_requires_review' },
+    mainSha: b, productionSha: a,
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('mismatched proof', {
+        candidateSha: b, mainSha: b, relevantPaths: ['package.json'],
+      });
+    },
+  }));
+});
+
+test('missing or mismatched release-sync evidence fails closed', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const valid = {
+    checked: true, mode: 'staging', mainSha: b,
+    deploymentEquivalent: true, changedPaths: ['package.json'],
+    relevantPaths: [],
+  };
+  for (const invalid of [
+    { ...valid, checked: false },
+    { ...valid, mode: 'not-production' },
+    { ...valid, mainSha: a },
+    { ...valid, deploymentEquivalent: false },
+    { ...valid, relevantPaths: ['apps/website/app/page.tsx'] },
+    { ...valid, changedPaths: undefined },
+  ]) {
+    await assert.rejects(reconcileSkippedStagingEquivalence({
+      plan, mainSha: b, productionSha: a,
+      assess: async () => invalid,
+    }));
+  }
+});
+
+test('GitHub freshness errors never authorize a production no-op', async () => {
+  await assert.rejects(reconcileSkippedStagingEquivalence({
+    plan: { dispatch: false, reason: 'skipped_staging_requires_review' },
+    mainSha: b, productionSha: a,
+    assess: async () => { throw new Error('GitHub API unavailable'); },
+  }), /GitHub API unavailable/);
 });
 
 test('invalid identifiers and input lists fail closed', () => {
@@ -149,6 +332,150 @@ test('invalid identifiers and input lists fail closed', () => {
     ...base, stagingRuns: [{ ...stage, id: 0 }],
   }));
 });
+
+test('defers only expensive recovery staging while main is still changing', () => {
+  const plan = decideRecovery({ ...base, mainUpdatedAt: '2026-11-01T12:59:30Z' });
+  assert.deepEqual(plan, { dispatch: false, reason: 'main_quiet_period' });
+  assert.equal(decideRecovery({
+    ...base, mainUpdatedAt: '2026-11-01T12:57:00Z',
+  }).target, 'staging');
+});
+
+test('verified staging remains eligible during quiet period', () => {
+  const plan = decideRecovery({
+    ...base, mainUpdatedAt: '2026-11-01T12:59:30Z', stagingRuns: [stage],
+  });
+  assert.equal(plan.target, 'production');
+  assert.equal(plan.reason, 'verified_staging_without_production');
+});
+
+test('active production and current production remain dominant during quiet period', () => {
+  const input = { ...base, mainUpdatedAt: '2026-11-01T12:59:30Z' };
+  assert.equal(decideRecovery({ ...input, productionSha: b }).reason, 'already_deployed');
+  assert.equal(decideRecovery({
+    ...input, productionRuns: [{ status: 'in_progress' }],
+  }).reason, 'production_active');
+});
+
+test('invalid commit timestamps are rejected rather than used as admission evidence', () => {
+  assert.throws(() => decideRecovery({
+    ...base, mainUpdatedAt: 'invalid',
+  }), /Invalid immutable main commit date/);
+});
+
+test('one failed explicit recovery is terminal and requires investigation', () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [{ head_sha: b, event: 'workflow_dispatch', status: 'completed',
+      conclusion: 'failure', recoveryAttempt: true }],
+  });
+  assert.deepEqual(plan, { dispatch: false, reason: 'failed_recovery_requires_review',
+    requiresReview: true });
+});
+
+test('recovery budget is bounded per SHA and resets for a newer main', () => {
+  const earlier = [{ head_sha: b, event: 'workflow_dispatch', status: 'completed',
+    conclusion: 'failure', recoveryAttempt: true }];
+  const duplicate = decideRecovery({ ...base, stagingRuns: [...earlier, ...earlier] });
+  assert.equal(duplicate.reason, 'recovery_budget_exceeded');
+  assert.equal(duplicate.requiresReview, true);
+  const latest = decideRecovery({
+    ...base, mainSha: 'c'.repeat(40), stagingRuns: earlier,
+    mainUpdatedAt: '2026-11-01T12:55:00Z',
+  });
+  assert.equal(latest.target, 'staging');
+});
+
+test('rapid A B C merges select latest main only after its quiet period', () => {
+  const earlier = [a, b].map(sha => ({ head_sha: sha, event: 'workflow_dispatch',
+    status: 'completed', conclusion: 'failure', recoveryAttempt: true }));
+  const latestSha = 'c'.repeat(40);
+  assert.equal(decideRecovery({
+    ...base, mainSha: latestSha, stagingRuns: earlier,
+    mainUpdatedAt: '2026-11-01T12:59:30Z',
+  }).reason, 'main_quiet_period');
+  assert.equal(decideRecovery({
+    ...base, mainSha: latestSha, stagingRuns: earlier,
+    mainUpdatedAt: '2026-11-01T12:56:00Z',
+  }).target, 'staging');
+});
+
+test('failed recovery takes precedence over an older qualified staging candidate', () => {
+  const result = decideRecovery({
+    ...base, stagingRuns: [
+      stage,
+      { head_sha: b, event: 'workflow_dispatch', status: 'completed',
+        conclusion: 'failure', recoveryAttempt: true },
+    ],
+  });
+  assert.deepEqual(result, {
+    dispatch: false, reason: 'failed_recovery_requires_review', requiresReview: true,
+  });
+});
+
+test('a failed recovery does not override already-deployed production', () => {
+  assert.equal(decideRecovery({
+    ...base, productionSha: b,
+    stagingRuns: [{ head_sha: b, recoveryAttempt: true,
+      status: 'completed', conclusion: 'failure' }],
+  }).reason, 'already_deployed');
+});
+
+test('incomplete production and staging histories fail closed before replay', () => {
+  assert.throws(() => assertCompleteRecoveryHistory({
+    total_count: 100, workflow_runs: [],
+  }, 'Production'), /requires pagination/);
+  assert.throws(() => assertCompleteRecoveryHistory({
+    total_count: 100, workflow_runs: [],
+  }, 'Staging'), /requires pagination/);
+  assert.throws(() => assertCompleteRecoveryHistory({
+    workflow_runs: [],
+  }, 'Production'), /history count missing/);
+  assert.deepEqual(assertCompleteRecoveryHistory({
+    total_count: 1, workflow_runs: [{ id: 123 }],
+  }, 'Production').workflow_runs, [{ id: 123 }]);
+});
+
+test('candidate-scoped history excludes unrelated accumulated production runs', async () => {
+  const result = await fetchCandidateProductionRuns(async since => {
+    assert.equal(since, '2026-11-01T12:50:00Z');
+    return { total_count: 1, workflow_runs: [{
+      id: 1, display_title: 'Promote staging ' + b,
+      event: 'workflow_dispatch', status: 'completed',
+      created_at: '2026-11-01T12:51:00Z',
+    }] };
+  }, '2026-11-01T12:50:00Z');
+  assert.equal(decideRecovery({ ...base, stagingRuns: [stage], productionRuns: result }).reason,
+    'verified_replay_already_attempted');
+});
+
+test('candidate-scoped query fails closed on truncated results or missing push', async () => {
+  await assert.rejects(fetchCandidateProductionRuns(async () => ({
+    total_count: 100, workflow_runs: [],
+  }), '2026-11-01T12:50:00Z'), /history incomplete/);
+  await assert.rejects(fetchCandidateProductionRuns(async () => ({
+    total_count: 0, workflow_runs: [],
+  }), null), /Missing reliable main push observation/);
+});
+
+test('quiet window follows observed push timestamp rather than git committer date', () => {
+  const latest = observedMainPushAt([
+    { head_sha: b, head_branch: 'main', event: 'push', created_at: '2026-11-01T12:59:30Z' },
+    { head_sha: b, event: 'workflow_dispatch', created_at: '2026-11-01T12:59:59Z' },
+  ], b);
+  assert.equal(latest, '2026-11-01T12:59:30.000Z');
+  assert.equal(decideRecovery({ ...base, mainUpdatedAt: latest }).reason, 'main_quiet_period');
+  assert.equal(observedMainPushAt([], b), null);
+});
+
+test('missing push evidence blocks recovery staging instead of bypassing the quiet period', () => {
+  assert.deepEqual(decideRecovery({ ...base, mainUpdatedAt: null }), {
+    dispatch: false,
+    reason: 'main_push_observation_missing',
+    requiresReview: true,
+  });
+});
+
 
 test('failed staging after Cloudflare deploy must not trigger another deploy', () => {
   const plan = decideRecovery({
@@ -167,18 +494,6 @@ test('failed staging after Cloudflare deploy must not trigger another deploy', (
   });
 });
 
-test('failed recovery is terminal for the exact commit, even if push was absent', () => {
-  assert.equal(decideRecovery({
-    ...base,
-    stagingRuns: [{
-      head_sha: b,
-      event: 'workflow_dispatch',
-      recoveryAttempt: true,
-      status: 'completed',
-      conclusion: 'failure',
-    }],
-  }).reason, 'failed_staging_requires_review');
-});
 
 test('failed staging cannot be hidden by a skipped release-sync staging run', () => {
   assert.equal(decideRecovery({
@@ -190,6 +505,7 @@ test('failed staging cannot be hidden by a skipped release-sync staging run', ()
   }).dispatch, false);
 });
 
+
 test('cancelled or timed-out staging cannot trigger an automatic redeploy', () => {
   for (const conclusion of ['cancelled', 'timed_out', 'action_required']) {
     assert.equal(decideRecovery({
@@ -197,4 +513,109 @@ test('cancelled or timed-out staging cannot trigger an automatic redeploy', () =
       stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion }],
     }).reason, 'failed_staging_requires_review');
   }
+});
+
+
+test('skipped release-sync cannot hide a successful fully verified staging run', () => {
+  assert.equal(decideRecovery({
+    ...base,
+    stagingRuns: [
+      { head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false },
+      stage,
+    ],
+  }).target, 'production');
+});
+
+test('failed push remains terminal even with an older qualified staging run', () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [
+      stage,
+      { head_sha: b, event: 'push', status: 'completed',
+        conclusion: 'failure', fullStage: false },
+    ],
+  });
+  assert.deepEqual(plan, {
+    dispatch: false, reason: 'failed_staging_requires_review',
+  });
+});
+
+test('production publisher for A stays active after main changes to B', async () => {
+  const olderSha = 'a'.repeat(40);
+  const active = await fetchActiveProductionRuns(async status => ({
+    total_count: status === 'in_progress' ? 1 : 0,
+    workflow_runs: status === 'in_progress'
+      ? [{ id: 90, head_sha: olderSha, status, display_title: 'Promote staging ' + olderSha }]
+      : [],
+  }));
+  const result = decideRecovery({
+    ...base, stagingRuns: [stage],
+    // Candidate-scoped completed history is empty. Global active state is not.
+    productionRuns: active,
+  });
+  assert.deepEqual(result, { dispatch: false, reason: 'production_active' });
+});
+
+test('active production status queries reject missing or truncated evidence', async () => {
+  await assert.rejects(fetchActiveProductionRuns(async status => ({
+    total_count: status === 'queued' ? 100 : 0,
+    workflow_runs: [],
+  })), /requires pagination/);
+  await assert.rejects(fetchActiveProductionRuns(async () => ({
+    total_count: 1,
+    workflow_runs: [{ id: 1, status: 'completed' }],
+  })), /status mismatch/);
+});
+
+test('any repository push run can supply main movement when staging push was path-filtered', () => {
+  const timestamp = observedMainPushAt([
+    { head_sha: b, head_branch: 'main', event: 'push', created_at: '2026-11-01T12:59:00Z',
+      name: 'Push on main' },
+  ], b);
+  assert.equal(timestamp, '2026-11-01T12:59:00.000Z');
+  assert.equal(decideRecovery({
+    ...base, stagingRuns: [], mainUpdatedAt: timestamp,
+  }).reason, 'main_quiet_period');
+  assert.equal(decideRecovery({
+    ...base, stagingRuns: [], mainUpdatedAt: timestamp, nowMs: now + 120000,
+  }).target, 'staging');
+});
+
+test('candidate history with 125 runs is fully paginated and does not lose an older replay', async () => {
+  const all = Array.from({ length: 125 }, (_, index) => ({
+    id: index + 1, created_at: '2026-11-01T12:51:00Z',
+    status: 'completed',
+    display_title: index === 124 ? 'Promote staging ' + b : 'different candidate',
+    event: index === 124 ? 'workflow_dispatch' : 'workflow_run',
+  }));
+  const result = await fetchCandidateProductionRuns(async (since, page) => {
+    assert.equal(since, '2026-11-01T12:50:00Z');
+    return {
+      total_count: all.length,
+      workflow_runs: all.slice((page - 1) * 100, page * 100),
+    };
+  }, '2026-11-01T12:50:00Z');
+  assert.equal(result.length, 125);
+  assert.equal(decideRecovery({
+    ...base, stagingRuns: [stage], productionRuns: result,
+  }).reason, 'verified_replay_already_attempted');
+});
+
+test('candidate pagination rejects changing totals and hidden old entries', async () => {
+  await assert.rejects(fetchCandidateProductionRuns(async (_since, page) => ({
+    total_count: page === 1 ? 101 : 102,
+    workflow_runs: Array.from({ length: page === 1 ? 100 : 1 },
+      (_, i) => ({ id: i + 1, created_at: '2026-11-01T12:51:00Z' })),
+  }), '2026-11-01T12:50:00Z'), /changed during pagination/);
+  await assert.rejects(fetchCandidateProductionRuns(async () => ({
+    total_count: 1,
+    workflow_runs: [{ id: 1, created_at: '2026-11-01T12:49:00Z' }],
+  }), '2026-11-01T12:50:00Z'), /earlier run/);
+});
+
+test('a push of the same SHA on another branch is not proof of main movement', () => {
+  assert.equal(observedMainPushAt([
+    { head_sha: b, head_branch: 'feature', event: 'push',
+      created_at: '2026-11-01T12:59:00Z' },
+  ], b), null);
 });
