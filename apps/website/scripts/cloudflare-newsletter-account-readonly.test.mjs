@@ -155,6 +155,96 @@ test('observed budget binding is reported, but never equated with enabled enforc
   assert.equal(JSON.stringify(report).includes('private-do-namespace'), false);
 });
 
+test('owner serving inventory stays sanitized and cannot attest coordinator source', async () => {
+  const fixture = mockCloudflare({
+    workerNames: [...liveScripts, 'vellira-newsletter-budget-owner'],
+  });
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher: fixture.fetcher,
+  });
+  assert.deepEqual(report.ownerServingVersions, {
+    status: 'observed',
+    servingVersionCount: 1,
+    multipleServingVersions: false,
+    sourceIdentity: 'unverified',
+    exclusiveCooperative: false,
+  });
+  assert.equal(JSON.stringify(report).includes(version), false);
+  assert.ok(fixture.calls.some(({ path }) =>
+    path.endsWith('/vellira-newsletter-budget-owner/deployments')
+  ));
+  assert.ok(fixture.calls.every(({ options }) => options.method === 'GET'));
+});
+
+test('two owner versions are observed but never presumed cooperative', async () => {
+  const fixture = mockCloudflare({
+    workerNames: [...liveScripts, 'vellira-newsletter-budget-owner'],
+  });
+  const fetcher = (url, options) => {
+    if (url.pathname.endsWith('/vellira-newsletter-budget-owner/deployments')) {
+      return makeResponse({ deployments: [{ versions: [
+        { version_id: version, percentage: 99.9 },
+        { version_id: secondVersion, percentage: 0.1 },
+      ] }] });
+    }
+    if (url.pathname.endsWith('/vellira-newsletter-budget-owner/versions/' + secondVersion)) {
+      assert.equal(options.method, 'GET');
+      return makeResponse({ resources: { bindings: [] }, malicious: 'hidden-secret' });
+    }
+    return fixture.fetcher(url, options);
+  };
+  const report = await auditCloudflareNewsletterAccount({
+    accountId,
+    apiToken: 'private-test-token',
+    fetcher,
+  });
+  assert.deepEqual(report.ownerServingVersions, {
+    status: 'observed',
+    servingVersionCount: 2,
+    multipleServingVersions: true,
+    sourceIdentity: 'unverified',
+    exclusiveCooperative: false,
+  });
+  const output = JSON.stringify(report);
+  assert.equal(output.includes(secondVersion), false);
+  assert.equal(output.includes('hidden-secret'), false);
+});
+
+test('owner incomplete allocation or unavailable detail fails closed', async () => {
+  const owner = 'vellira-newsletter-budget-owner';
+  for (const mode of ['invalid_split', 'denied_detail']) {
+    const fixture = mockCloudflare({
+      workerNames: [...liveScripts, owner],
+    });
+    const fetcher = (url, options) => {
+      if (url.pathname.endsWith('/' + owner + '/deployments')) {
+        const versions = mode === 'invalid_split'
+          ? [{ version_id: version, percentage: 50 }]
+          : [{ version_id: version, percentage: 100 }];
+        return makeResponse({ deployments: [{ versions }] });
+      }
+      if (mode === 'denied_detail' &&
+        url.pathname.endsWith('/' + owner + '/versions/' + version)) {
+        assert.equal(options.method, 'GET');
+        return makeResponse(null, 403);
+      }
+      return fixture.fetcher(url, options);
+    };
+    const report = await auditCloudflareNewsletterAccount({
+      accountId,
+      apiToken: 'private-test-token',
+      fetcher,
+    });
+    assert.deepEqual(report.ownerServingVersions, {
+      status: 'incomplete',
+      sourceIdentity: 'unverified',
+      exclusiveCooperative: false,
+    });
+  }
+});
+
 test('all traffic-serving versions must have the budget binding before reporting true', async () => {
   for (const secondHasBinding of [false, true]) {
     const base = mockCloudflare({ withBinding: true });
