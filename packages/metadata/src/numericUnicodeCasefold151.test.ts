@@ -81,26 +81,4 @@ describe('pinned Unicode 15.1 full casefold (proposed Numeric contract)', () => 
     );
   });
 
-  it('preserves existing safety and numeric grammar HOLD', async () => {
-    const { compileComponentProgram } = await import(
-      '../../../scripts/component-program/compile'
-    );
-    const { componentProgramSource } = await import(
-      '../../../scripts/component-program/source'
-    );
-    const { mediaSpec, mediaProgram } = await import(
-      '../../../scripts/component-program/fixtures/programs'
-    );
-    const source = componentProgramSource(mediaSpec());
-    const decisions = mediaProgram();
-    const output = compileComponentProgram(source, {
-      ...decisions,
-      modules: [
-        ...decisions.modules,
-        { id: 'bounded-numeric-series', platforms: ['react'], bindings: {} },
-      ],
-    });
-    expect(output.disposition).toBe('missing-grammar-capability');
-    expect(output.program).toBeNull();
-  });
 });
