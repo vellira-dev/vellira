@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 
+import {
+  assessFreshProductionCandidate,
+  ProductionCandidateSupersededError,
+} from './cloudflare-production-freshness.mjs';
+
 const SHA = /^[0-9a-f]{40}$/;
 const STAGING = 'deploy-website-cloudflare-staging.yml';
 const PRODUCTION = 'deploy-website-cloudflare-production.yml';
@@ -186,6 +191,69 @@ export function decideRecovery({
   return { dispatch: true, target: 'staging', reason: 'production_behind_unstaged_main' };
 }
 
+// A skipped staging job is not evidence of a deployed website. Only after
+// the shared production-admission verifier proves the immutable live runtime
+// SHA is deployment-equivalent to current main (including authenticated
+// release-sync bytes) may recovery classify this as an already-deployed no-op.
+export async function reconcileSkippedStagingEquivalence({
+  plan,
+  mainSha,
+  productionSha,
+  assess = assessFreshProductionCandidate,
+  log = console.log,
+}) {
+  if (plan?.reason !== 'skipped_staging_requires_review') return plan;
+  assert.equal(plan.dispatch, false, 'Skipped staging must not already dispatch');
+  assert.match(mainSha, SHA);
+  assert.match(productionSha, SHA);
+  assert.notEqual(productionSha, mainSha);
+
+  let evidence;
+  try {
+    evidence = await assess({
+      configPath: 'apps/website/wrangler.production.jsonc',
+      candidateSource: 'staging',
+      candidateSha: productionSha,
+      mainSha,
+      repository: OWNER,
+      githubToken: process.env.GITHUB_TOKEN,
+    });
+  } catch (error) {
+    if (!(error instanceof ProductionCandidateSupersededError)) throw error;
+    assert.equal(error.candidateSha, productionSha);
+    assert.equal(error.mainSha, mainSha);
+    // Limit and escape paths before emitting a GitHub workflow annotation.
+    const preview = error.relevantPaths
+      .slice(0, 8)
+      .map((path) => JSON.stringify(String(path).slice(0, 120)));
+    const omitted = error.relevantPaths.length - preview.length;
+    const details =
+      `Production convergence blocked: deployed SHA ${productionSha}; main SHA ${mainSha}; ` +
+      `deployment-relevant paths (${error.relevantPaths.length}): ` +
+      (preview.join(', ') || 'none') +
+      (omitted > 0 ? ` (+${omitted} more)` : '');
+    log(
+      '::notice::' +
+        details.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A')
+    );
+    // A deployment-relevant difference is not authority to skip recovery.
+    return plan;
+  }
+
+  assert.equal(evidence?.checked, true, 'Recovery freshness proof is missing');
+  assert.equal(evidence.mode, 'staging', 'Unexpected freshness mode');
+  assert.equal(evidence.mainSha, mainSha, 'Freshness proof main changed');
+  assert.equal(evidence.deploymentEquivalent, true, 'Unproven deployment equivalence');
+  assert.deepEqual(evidence.relevantPaths, [], 'Deployment-relevant files changed');
+  assert.ok(Array.isArray(evidence.changedPaths), 'Freshness change history is missing');
+  return {
+    dispatch: false,
+    reason: 'already_deployed_equivalent',
+    deployedSha: productionSha,
+    equivalentMainSha: mainSha,
+  };
+}
+
 let executionMode = null;
 
 async function github(path, { method = 'GET', body } = {}) {
@@ -306,8 +374,12 @@ async function main(mode) {
       productionEvidence.push(run);
     }
   }
-  const plan = decideRecovery({
-    mainSha, productionSha, stagingRuns, productionRuns: productionEvidence, mainUpdatedAt,
+  const plan = await reconcileSkippedStagingEquivalence({
+    plan: decideRecovery({
+      mainSha, productionSha, stagingRuns, productionRuns: productionEvidence, mainUpdatedAt,
+    }),
+    mainSha,
+    productionSha,
   });
   console.log(JSON.stringify({ mainSha, productionSha, ...plan }));
   if (mode === 'plan') {

@@ -1,0 +1,19 @@
+{
+  "accordion": "src/components/Accordion/index.ts",
+  "button": "src/primitives/Button/index.ts",
+  "checkbox": "src/primitives/Checkbox/index.ts",
+  "dropdown": "src/components/Dropdown/index.ts",
+  "form-field": "src/patterns/FormField/index.ts",
+  "input": "src/primitives/Input/index.ts",
+  "modal": "src/components/Modal/index.ts",
+  "popover": "src/components/Popover/index.ts",
+  "portal": "src/primitives/Portal/index.ts",
+  "radio": "src/primitives/Radio/index.ts",
+  "radio-group": "src/components/RadioGroup/index.ts",
+  "select": "src/components/Select/index.ts",
+  "switch": "src/primitives/Switch/index.ts",
+  "tabs": "src/components/Tabs/index.ts",
+  "textarea": "src/primitives/Textarea/index.ts",
+  "theme": "src/theme/index.ts",
+  "tooltip": "src/components/Tooltip/index.ts"
+}

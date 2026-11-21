@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   FlatList,
@@ -25,6 +25,7 @@ import {
   createContentStyles,
   SELECT_LIST_MAX_HEIGHT,
 } from './SelectContent.styles';
+import { resolveSelectListViewportHeight } from './selectListViewport';
 
 export const SelectContent = createSelectSlot<SelectContentProps>(
   'content',
@@ -38,6 +39,10 @@ export const SelectContentSurface = () => {
   const largeText = fontScale >= 1.5;
   const wasOpenRef = useRef(false);
   const [openCycle, setOpenCycle] = useState(0);
+  // The estimated row height can differ from the actual rendered font/layout.
+  // Only grow a short list to its measured content size; keep the existing
+  // cap for longer lists so their scrolling behavior remains unchanged.
+  const [measuredList, setMeasuredList] = useState({ key: '', height: 0 });
   const context = useSelectContext();
   const {
     isOpen,
@@ -76,9 +81,22 @@ export const SelectContentSurface = () => {
   // The row estimate matches getItemLayout and includes vertical list padding.
   const estimatedListHeight =
     filteredRows.length * itemHeight + theme.tokens.spacing[2] * 2;
-  const listViewportHeight = Math.min(
-    SELECT_LIST_MAX_HEIGHT,
-    estimatedListHeight
+  // Only short lists need content measurement. Avoid concatenating all row
+  // keys on every render of a long/virtualized list.
+  const isShortList = estimatedListHeight < SELECT_LIST_MAX_HEIGHT;
+  const listMeasureKey = useMemo(
+    () =>
+      isShortList
+        ? `${openCycle}:${itemHeight}:${filteredRows.map((row) => row.key).join('|')}`
+        : '',
+    [isShortList, openCycle, itemHeight, filteredRows]
+  );
+  const measuredHeight =
+    measuredList.key === listMeasureKey ? measuredList.height : 0;
+  const listViewportHeight = resolveSelectListViewportHeight(
+    estimatedListHeight,
+    isShortList ? measuredHeight : 0,
+    SELECT_LIST_MAX_HEIGHT
   );
 
   useEffect(() => {
@@ -228,6 +246,19 @@ export const SelectContentSurface = () => {
             }
           }}
           onContentSizeChange={(_width, height) => {
+            if (
+              isOpen &&
+              isShortList &&
+              Number.isFinite(height) &&
+              height > 0
+            ) {
+              setMeasuredList((previous) =>
+                previous.key === listMeasureKey &&
+                Math.abs(previous.height - height) < 0.5
+                  ? previous
+                  : { key: listMeasureKey, height }
+              );
+            }
             if (
               isOpen &&
               (

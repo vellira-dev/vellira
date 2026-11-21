@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Expo CLI 58.1.20: parser source SHA-256 unchanged from reviewed 58.1.19 (no Zod).
+// Expo CLI 58.1.21: parser source SHA-256 unchanged from reviewed 58.1.19 (no Zod).
 // Preserve Vellira's stricter 64 KiB cumulative UTF-8 and 128-item limits.
 // npm ci validates package tarball SRI; this guard pins the reviewed parser
 // source SHA-256 and fails closed when installed bytes or package identities drift.
@@ -19,13 +19,13 @@ const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 // Attested against the exact clean npm CI install and published CLI tarball
 // verified with the package-lock SRI (GitHub Action run 41349253964).
 const APPROVED_SOURCE_SHA256 = 'b1b370abd2c05a281a7fa8bc8600702002bc69bf4079026bdf12b074a1ee60fa';
-const EXPECTED_INTEGRITY = 'sha512-VXXcqGuXBngzItcP97ERWON3aHJOeAwDxuRlkxgbYfW9m9DpGHM6umGgjOPWWy14xSArUvwGZpg+D5Ms+hnnkg==';
+const EXPECTED_INTEGRITY = 'sha512-E+27FQ1Y26fVb0p1wVHBFkbe5oQubUXLwF/au5Vy8OCqDWrmbekBQamRI4mBhY15FhZQxAkyK0e6hXcEFKVBOw==';
 const LOCKED_CLI = 'node_modules/expo/node_modules/@expo/cli';
-assert.equal(metadata.version, '58.1.20', 'Unsupported Expo CLI: source review required');
-assert.equal(lock.packages[LOCKED_CLI]?.version, '58.1.20');
+assert.equal(metadata.version, '58.1.21', 'Unsupported Expo CLI: source review required');
+assert.equal(lock.packages[LOCKED_CLI]?.version, '58.1.21');
 assert.equal(lock.packages[LOCKED_CLI]?.integrity, EXPECTED_INTEGRITY);
-assert.equal(lock.packages['node_modules/expo']?.version, '58.0.25');
-assert.equal(lock.packages['node_modules/@expo/metro-config']?.version, '58.0.22');
+assert.equal(lock.packages['node_modules/expo']?.version, '58.0.26');
+assert.equal(lock.packages['node_modules/@expo/metro-config']?.version, '58.0.23');
 assert.equal(lock.packages['node_modules/react-native']?.version, '0.88.1');
 assert.equal(lock.packages['node_modules/@expo/schema-utils']?.version, '58.0.3');
 assert.equal(lock.packages['node_modules/node-forge']?.version, '1.4.3');

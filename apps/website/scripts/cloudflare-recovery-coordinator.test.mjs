@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { decideRecovery, assertCompleteRecoveryHistory, fetchCandidateProductionRuns, observedMainPushAt, fetchActiveProductionRuns } from './cloudflare-recovery-coordinator.mjs';
+import {
+  decideRecovery,
+  reconcileSkippedStagingEquivalence,
+  assertCompleteRecoveryHistory,
+  fetchCandidateProductionRuns,
+  observedMainPushAt,
+  fetchActiveProductionRuns,
+} from './cloudflare-recovery-coordinator.mjs';
+import {
+  assessFreshProductionCandidate,
+  ProductionCandidateSupersededError,
+} from './cloudflare-production-freshness.mjs';
 
 const a = 'a'.repeat(40);
 const b = 'b'.repeat(40);
@@ -130,6 +141,188 @@ test('release-sync-only skipped staging cannot trigger another automatic staging
     ...base,
     stagingRuns: [{ head_sha: b, event: 'push', status: 'completed', conclusion: 'success', fullStage: false }],
   }), { dispatch: false, reason: 'skipped_staging_requires_review' });
+});
+
+test('verified deployed release-sync equivalence closes skipped staging without dispatch', async () => {
+  const plan = decideRecovery({
+    ...base,
+    stagingRuns: [{
+      head_sha: b, event: 'push', status: 'completed',
+      conclusion: 'success', fullStage: false,
+    }],
+  });
+  assert.equal(plan.reason, 'skipped_staging_requires_review');
+  let options;
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async (input) => {
+      options = input;
+      return {
+        checked: true, mode: 'staging', mainSha: b,
+        deploymentEquivalent: true, changedPaths: ['package.json'],
+        relevantPaths: [],
+      };
+    },
+  });
+  assert.deepEqual(result, {
+    dispatch: false,
+    reason: 'already_deployed_equivalent',
+    deployedSha: a,
+    equivalentMainSha: b,
+  });
+  assert.equal(options.candidateSha, a, 'Proof must bind to the live runtime SHA');
+  assert.equal(options.mainSha, b, 'Proof must bind to exact current main');
+  assert.equal(options.repository, 'vellira-dev/vellira');
+  assert.equal(options.candidateSource, 'staging');
+});
+
+test('deployment-relevant changes retain skipped-staging block', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const notices = [];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    log: (message) => notices.push(message),
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('runtime files changed', {
+        candidateSha: a,
+        mainSha: b,
+        relevantPaths: ['apps/website/app/page.tsx'],
+      });
+    },
+  });
+  assert.strictEqual(result, plan);
+  assert.equal(notices.length, 1);
+  assert.match(notices[0], /^::notice::Production convergence blocked:/);
+  assert.ok(notices[0].includes(a));
+  assert.ok(notices[0].includes(b));
+  assert.ok(notices[0].includes('apps/website/app/page.tsx'));
+});
+
+test('blocked recovery notice bounds and escapes untrusted paths', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const notices = [];
+  const paths = [
+    'apps/website/unsafe%0A\n::error::injected',
+    ...Array.from({ length: 11 }, (_, index) => `apps/website/path-${index}`),
+  ];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    log: (message) => notices.push(message),
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('stale', {
+        candidateSha: a, mainSha: b, relevantPaths: paths,
+      });
+    },
+  });
+  assert.strictEqual(result, plan);
+  assert.equal(notices.length, 1);
+  assert.ok(notices[0].startsWith('::notice::'));
+  assert.ok(notices[0].includes('deployment-relevant paths (12)'));
+  assert.ok(notices[0].includes('(+4 more)'));
+  assert.ok(notices[0].includes('%250A'), 'Percent escapes must be escaped');
+  assert.equal(notices[0].includes('\n'), false, 'Must not inject a second workflow command');
+  assert.equal(notices[0].includes('apps/website/path-7'), false);
+  assert.ok(notices[0].length < 1500, 'Annotation must remain bounded');
+});
+
+test('other recovery decisions never invoke release-sync equivalence proof', async () => {
+  const plan = decideRecovery(base);
+  assert.strictEqual(await reconcileSkippedStagingEquivalence({
+    plan, mainSha: b, productionSha: a,
+    assess: async () => { throw new Error('Must not fetch'); },
+  }), plan);
+});
+
+test('multi-commit website drift plus atomic release-sync must keep recovery blocked', async () => {
+  // Real-world pattern: production A, an intervening engineering change, then
+  // an authenticated release-sync-only main B whose staging deploy was skipped.
+  // A combined compare is NOT a single release-sync and must never inherit
+  // the atomic-sync exception.
+  const skipped = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const fetched = [];
+  const result = await reconcileSkippedStagingEquivalence({
+    plan: skipped, mainSha: b, productionSha: a,
+    assess: (options) => assessFreshProductionCandidate({
+      ...options,
+      githubToken: 'fixture-token',
+      fetchImpl: async (url) => {
+        fetched.push(String(url));
+        assert.match(String(url), /\/compare\//);
+        return new Response(JSON.stringify({
+          status: 'ahead',
+          ahead_by: 3,
+          behind_by: 0,
+          total_commits: 3,
+          files: [
+            { filename: 'package.json', status: 'modified' },
+            { filename: 'examples/workspace-starter/web/package.json', status: 'modified' },
+            { filename: 'scripts/ci/release-sync-admission.mjs', status: 'modified' },
+          ],
+        }), { status: 200 });
+      },
+    }),
+  });
+  assert.strictEqual(result, skipped);
+  assert.equal(fetched.length, 1, 'No candidate manifest read can authorize mixed commit drift');
+});
+
+test('diverged or incomplete GitHub compare fails closed without a no-op decision', async () => {
+  const skipped = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  for (const comparison of [
+    { status: 'diverged', files: [] },
+    { status: 'ahead' },
+  ]) {
+    await assert.rejects(reconcileSkippedStagingEquivalence({
+      plan: skipped, mainSha: b, productionSha: a,
+      assess: (options) => assessFreshProductionCandidate({
+        ...options,
+        githubToken: 'fixture-token',
+        fetchImpl: async () => new Response(JSON.stringify(comparison), { status: 200 }),
+      }),
+    }));
+  }
+});
+
+test('stale evidence exception with mismatched source SHA fails closed', async () => {
+  await assert.rejects(reconcileSkippedStagingEquivalence({
+    plan: { dispatch: false, reason: 'skipped_staging_requires_review' },
+    mainSha: b, productionSha: a,
+    assess: async () => {
+      throw new ProductionCandidateSupersededError('mismatched proof', {
+        candidateSha: b, mainSha: b, relevantPaths: ['package.json'],
+      });
+    },
+  }));
+});
+
+test('missing or mismatched release-sync evidence fails closed', async () => {
+  const plan = { dispatch: false, reason: 'skipped_staging_requires_review' };
+  const valid = {
+    checked: true, mode: 'staging', mainSha: b,
+    deploymentEquivalent: true, changedPaths: ['package.json'],
+    relevantPaths: [],
+  };
+  for (const invalid of [
+    { ...valid, checked: false },
+    { ...valid, mode: 'not-production' },
+    { ...valid, mainSha: a },
+    { ...valid, deploymentEquivalent: false },
+    { ...valid, relevantPaths: ['apps/website/app/page.tsx'] },
+    { ...valid, changedPaths: undefined },
+  ]) {
+    await assert.rejects(reconcileSkippedStagingEquivalence({
+      plan, mainSha: b, productionSha: a,
+      assess: async () => invalid,
+    }));
+  }
+});
+
+test('GitHub freshness errors never authorize a production no-op', async () => {
+  await assert.rejects(reconcileSkippedStagingEquivalence({
+    plan: { dispatch: false, reason: 'skipped_staging_requires_review' },
+    mainSha: b, productionSha: a,
+    assess: async () => { throw new Error('GitHub API unavailable'); },
+  }), /GitHub API unavailable/);
 });
 
 test('invalid identifiers and input lists fail closed', () => {

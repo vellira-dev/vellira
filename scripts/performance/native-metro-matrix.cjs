@@ -1,13 +1,22 @@
 #!/usr/bin/env node
-// Opt-in Phase B #470. Measures production iOS/Android Metro exports, not
-// installed-package bytes or on-device startup. Pins published npm version.
+// Opt-in #470 / #2082 production iOS/Android Metro byte matrix.
+// Uses an exact published version or one immutable packed candidate; never
+// substitutes local source files into a clean consumer or claims device proof.
 const { createHash } = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { inspectPublishedPickerReferences } = require('./native-picker-scan.cjs');
+const { getNativeExpoFixture } = require('./native-expo-fixture.cjs');
+const { assertNativeSubpathContract } = require('../release-candidate/native-subpath-contract.cjs');
+const {
+  NATIVE_PACKAGE_NAMES,
+  assertInstalledCandidatePackages,
+  validateCandidateArtifactDirectory,
+} = require('../release-candidate/consumer-artifacts.cjs');
 
+const expoFixture = getNativeExpoFixture(process.env.VELLIRA_NATIVE_EXPO_PROFILE);
 const version = process.env.VELLIRA_NATIVE_VERSION;
 if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
   throw new Error('Set VELLIRA_NATIVE_VERSION to an exact published semver.');
@@ -15,10 +24,60 @@ if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
 const output = path.resolve(
   process.env.VELLIRA_METRO_EVIDENCE ?? 'consumer-evidence/native-metro-matrix.json'
 );
+const candidateTarball = process.env.VELLIRA_NATIVE_CANDIDATE_TGZ;
+const requestedCandidateHash = process.env.VELLIRA_NATIVE_CANDIDATE_SHA256;
+let candidateSha256 = null;
+if (candidateTarball) {
+  if (!path.isAbsolute(candidateTarball) ||
+      !candidateTarball.endsWith('.tgz') ||
+      !fs.statSync(candidateTarball, { throwIfNoEntry: false })?.isFile()) {
+    throw new Error('Native candidate must be an existing absolute .tgz file.');
+  }
+  if (!/^[a-f0-9]{64}$/.test(requestedCandidateHash ?? '')) {
+    throw new Error('Native Metro candidate requires its SHA256 pinned.');
+  }
+  candidateSha256 = createHash('sha256')
+    .update(fs.readFileSync(candidateTarball)).digest('hex');
+  if (candidateSha256 !== requestedCandidateHash) {
+    throw new Error('Native Metro candidate SHA256 mismatch.');
+  }
+} else if (requestedCandidateHash) {
+  throw new Error('Native Metro candidate SHA256 supplied without a tarball.');
+}
+// In candidate mode, all Vellira dependencies must come from the same exact
+// locally packed release candidate. A standalone Native tgz could silently
+// resolve core/icons/tokens/types from npm registry and invalidate the proof.
+let candidate = null;
+if (candidateTarball) {
+  const expectedSourceSha = process.env.VELLIRA_CANDIDATE_SHA;
+  const candidateDir = process.env.VELLIRA_CANDIDATE_DIR;
+  if (!candidateDir || !/^[a-f0-9]{40}$/.test(expectedSourceSha ?? '')) {
+    throw new Error('Native Metro candidate requires VELLIRA_CANDIDATE_DIR and exact VELLIRA_CANDIDATE_SHA.');
+  }
+  candidate = validateCandidateArtifactDirectory(candidateDir, expectedSourceSha, NATIVE_PACKAGE_NAMES);
+  if (candidate.manifest.version !== version) {
+    throw new Error('Native Metro candidate version differs from candidate manifest.');
+  }
+  const nativeArtifact = candidate.packages.find(p => p.name === '@vellira-ui/react-native');
+  if (!nativeArtifact || path.resolve(nativeArtifact.tarballPath) !== path.resolve(candidateTarball) ||
+      nativeArtifact.sha256 !== candidateSha256) {
+    throw new Error('Native Metro tarball differs from exact release candidate.');
+  }
+}
+const optInSubpaths = process.env.VELLIRA_METRO_SUBPATH_MATRIX === '1';
 const cases = ['baseline', 'theme', 'button', 'button-select'];
+if (optInSubpaths) {
+  cases.push('leaf-theme', 'leaf-button', 'leaf-button-select', 'mixed-root-leaf');
+}
 const platforms = ['ios', 'android'];
 const sourceInventories = {};
 const productionOnly = process.env.VELLIRA_METRO_PRODUCTION_ONLY === '1';
+// Explicit opt-in: retain the actual measured scripts and npm resolution locks.
+// This is never enabled by routine CI and must not replace the JSON receipt.
+const retainDir = process.env.VELLIRA_METRO_RETAIN_DIR;
+if (retainDir && (!path.isAbsolute(retainDir) || fs.existsSync(retainDir))) {
+  throw new Error('VELLIRA_METRO_RETAIN_DIR must be an absolute, unused path.');
+}
 
 function run(command, args, cwd, extraEnv = {}) {
   const result = spawnSync(command, args, {
@@ -56,14 +115,23 @@ function walk(dir) {
   });
 }
 function manifest(kind) {
-  const deps = {
-    '@expo/metro-runtime': '57.0.17',
-    expo: '57.0.31',
-    react: '19.2.3',
-    'react-native': '0.86.3',
-    'react-native-svg': '15.15.4',
-  };
-  if (kind !== 'baseline') deps['@vellira-ui/react-native'] = version;
+  const deps = Object.fromEntries(
+    ['@expo/metro-runtime', 'expo', 'react', 'react-native', 'react-native-svg']
+      .map((name) => [name, expoFixture.dependencies[name]])
+  );
+  if (expoFixture.profile === 'starter58') {
+    deps['react-native-safe-area-context'] =
+      expoFixture.dependencies['react-native-safe-area-context'];
+  }
+  if (kind !== 'baseline') {
+    if (candidate) {
+      for (const artifact of candidate.packages) {
+        deps[artifact.name] = 'file:' + artifact.tarballPath;
+      }
+    } else {
+      deps['@vellira-ui/react-native'] = version;
+    }
+  }
   return {
     name: 'vellira-native-metro-' + kind,
     private: true,
@@ -73,6 +141,32 @@ function manifest(kind) {
   };
 }
 function app(kind) {
+  if (kind.startsWith('leaf-') || kind === 'mixed-root-leaf') {
+    const themeOnly = kind === 'leaf-theme';
+    const select = kind === 'leaf-button-select' || kind === 'mixed-root-leaf';
+    const mixed = kind === 'mixed-root-leaf';
+    const imports = [
+      "import React from 'react';",
+      "import { View, Text } from 'react-native';",
+      "import { ThemeProvider as LeafThemeProvider, useTheme as leafUseTheme } from '@vellira-ui/react-native/theme';",
+      ...(!themeOnly ? ["import { Button as LeafButton } from '@vellira-ui/react-native/button';"] : []),
+      ...(select ? ["import { Select } from '@vellira-ui/react-native/select';"] : []),
+      ...(mixed ? ["import { Button as RootButton, ThemeProvider as RootThemeProvider, useTheme as rootUseTheme } from '@vellira-ui/react-native';"] : []),
+    ];
+    const contents = themeOnly
+      ? "React.createElement(Text, null, 'Metro theme only')"
+      : select
+        ? "React.createElement(View, null, React.createElement(LeafButton, null, 'Metro Button'), React.createElement(Select, { label: 'Choice', options: [{ value: 'one', label: 'One' }], defaultValue: 'one', presentation: 'sheet' }))"
+        : "React.createElement(LeafButton, null, 'Metro Button')";
+    const inner = mixed
+      ? "React.createElement(View, null, React.createElement(RootButton, null, 'Root Button'), " + contents + ")"
+      : contents;
+    const children = mixed
+      ? "React.createElement(RootThemeProvider, { theme: 'light' }, React.createElement(LeafThemeProvider, { theme: 'dark' }, " + inner + "))"
+      : "React.createElement(LeafThemeProvider, { defaultTheme: 'light' }, " + inner + ")";
+    return imports.join('\n') + '\nexport default function App() { return React.createElement(View, null, ' +
+      children + '); }\n';
+  }
   const imports = kind === 'baseline'
     ? ''
     : "import { " +
@@ -106,19 +200,48 @@ function app(kind) {
   );
 }
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vellira-metro-1906-'));
+if (retainDir) fs.mkdirSync(retainDir, { recursive: true });
+function retainArtifact(source, relative) {
+  if (!retainDir) return null;
+  const target = path.join(retainDir, relative);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(source, target, fs.constants.COPYFILE_EXCL);
+  return {
+    relativePath: relative.replaceAll('\\\\', '/'),
+    sha256: createHash('sha256').update(fs.readFileSync(target)).digest('hex'),
+    bytes: fs.statSync(target).size,
+  };
+}
 const evidence = {
   schemaVersion: 2,
-  issue: 470,
+  issue: optInSubpaths ? 2082 : 470,
   version,
+  expoFixtureProfile: expoFixture.profile,
+  starterLockSha256: expoFixture.lockSha256,
   node: process.version,
   npm: run('npm', ['--version'], process.cwd()),
   sourceRevision: run(
     'git', ['rev-parse', 'HEAD'], path.resolve(__dirname, '../..')
   ),
   pinnedFixtureDependencies: manifest('baseline').dependencies,
-  installMode: 'normal npm install; legacy-peer-deps=false',
+  installMode: candidate
+    ? 'exact matched Native release candidate tarballs; normal npm install; legacy-peer-deps=false'
+    : 'normal npm install; legacy-peer-deps=false',
   productionOnly,
+  optInSubpaths,
+  candidateSource: candidateTarball
+    ? { mode: 'exact-candidate-tarballs',
+        sha256: candidateSha256,
+        path: path.basename(candidateTarball),
+        manifestSha256: candidate.manifestSha256,
+        sourceSha: candidate.manifest.source.sha,
+        packages: candidate.packages.map(p => ({ name: p.name, version: p.version, sha256: p.sha256 })) }
+    : { mode: 'exact-published-npm', version },
   purpose: 'Differential iOS/Android production Metro output; not device startup',
+  ...(retainDir ? { retainedArtifacts: {
+    directory: retainDir,
+    cases: {},
+  } } : {}),
   cases: {},
 };
 try {
@@ -136,7 +259,17 @@ try {
     }
     run('npm', ['install', '--no-audit', '--no-fund'], dir);
     const lockBytes = fs.readFileSync(path.join(dir, 'package-lock.json'));
+    if (retainDir) {
+      evidence.retainedArtifacts.cases[kind] = {
+        lockfile: retainArtifact(path.join(dir, 'package-lock.json'),
+          path.join(kind, 'package-lock.json')),
+        productionScripts: {},
+      };
+    }
     const lock = JSON.parse(lockBytes.toString('utf8'));
+    const installedCandidate = candidate && kind !== 'baseline'
+      ? assertInstalledCandidatePackages(dir, candidate, NATIVE_PACKAGE_NAMES)
+      : null;
     if (lock.packages?.['node_modules/@react-native-picker/picker']) {
       throw new Error(kind + ': npm lockfile unexpectedly installed Picker.');
     }
@@ -158,6 +291,12 @@ try {
       const nativeManifest = JSON.parse(
         fs.readFileSync(path.join(nativeRoot, 'package.json'), 'utf8')
       );
+      if (optInSubpaths) {
+        nativePackageInventory = assertNativeSubpathContract(nativeRoot);
+        if (!nativePackageInventory.enabled) {
+          throw new Error(kind + ': Native subpath export graph is missing');
+        }
+      }
       const packedFiles = walk(path.join(nativeRoot, 'dist'));
       if (!packedFiles.length) throw new Error(kind + ': missing published dist');
       const { references, scannedFiles } = inspectPublishedPickerReferences(nativeRoot, packedFiles);
@@ -167,6 +306,7 @@ try {
         throw new Error(kind + ': published Vellira still requires Picker peer.');
       }
       nativePackageInventory = {
+        ...(nativePackageInventory ? { sharedSubpaths: nativePackageInventory } : {}),
         requiredPeers: nativeManifest.peerDependencies ?? {},
         optionalPeers: nativeManifest.peerDependenciesMeta ?? {},
         distFileCount: packedFiles.length,
@@ -187,6 +327,12 @@ try {
       if (!files.length) throw new Error(kind + '/' + platform + ': no output files');
       const js = files.filter((file) => /\.(?:js|hbc)$/.test(file));
       if (!js.length) throw new Error(kind + '/' + platform + ': no JS/Hermes files');
+      if (retainDir) {
+        evidence.retainedArtifacts.cases[kind].productionScripts[platform] =
+          js.map((file) => retainArtifact(file, path.join(
+            kind, 'out-' + platform, path.relative(outputDir, file)
+          )));
+      }
       measurements[platform] = {
         outputBytes: files.reduce((sum, file) => sum + fs.statSync(file).size, 0),
         scriptBytes: js.reduce((sum, file) => sum + fs.statSync(file).size, 0),
@@ -216,7 +362,7 @@ try {
         const content = fs.readFileSync(bundlePath, 'utf8');
         const marker = kind === 'baseline'
           ? 'Metro baseline'
-          : kind === 'theme'
+          : kind === 'theme' || kind === 'leaf-theme'
             ? 'Metro theme only'
             : 'Metro Button';
         if (content.length < 10_000 || !content.includes(marker)) {
@@ -263,6 +409,7 @@ try {
         packageLockSha256: createHash('sha256').update(lockBytes).digest('hex'),
         pickerInLockfile: false,
         nativeExplicitlyRequested: kind !== 'baseline',
+        ...(installedCandidate ? { verifiedLocalCandidatePackages: installedCandidate.map(p => p.name) } : {}),
       },
       nativePackageInventory,
       platforms: measurements,
@@ -282,6 +429,22 @@ try {
     evidence.cases['button-select'].platforms[platform].deltaFromButton =
       evidence.cases['button-select'].platforms[platform].scriptBytes -
       evidence.cases.button.platforms[platform].scriptBytes;
+  }
+  if (optInSubpaths) {
+    evidence.nativeSubpathDeltas = {};
+    for (const platform of platforms) {
+      const bytes = (kind) => evidence.cases[kind].platforms[platform].scriptBytes;
+      evidence.nativeSubpathDeltas[platform] = Object.fromEntries([
+        ['theme', ['theme', 'leaf-theme']],
+        ['button', ['button', 'leaf-button']],
+        ['buttonSelect', ['button-select', 'leaf-button-select']],
+        ['mixedRootLeaf', ['button-select', 'mixed-root-leaf']],
+      ].map(([name, [before, after]]) => [
+        name,
+        { rootBytes: bytes(before), candidateBytes: bytes(after),
+          savedBytes: bytes(before) - bytes(after) },
+      ]));
+    }
   }
   evidence.sourceModuleDeltas = {};
   if (!productionOnly) {
@@ -309,6 +472,12 @@ try {
   }
   fs.mkdirSync(path.dirname(output), { recursive: true });
   fs.writeFileSync(output, JSON.stringify(evidence, null, 2) + '\n');
+  if (retainDir) {
+    // The original JSON receipt is also retained; it carries source revision,
+    // pinned toolchain, tarball digests and the emitted-script hash ledger.
+    fs.copyFileSync(output, path.join(retainDir, 'native-metro-matrix.json'),
+      fs.constants.COPYFILE_EXCL);
+  }
   console.log('[native-metro-1906] evidence:', output);
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
