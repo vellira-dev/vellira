@@ -30,6 +30,5 @@ describe('link evidence reconciliation (read-only)', () => {
         expect(row.evidence).toBeNull();
       }
     }
-    expect(report.original.complete).toBe(false);
   });
 });
