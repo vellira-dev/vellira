@@ -9,7 +9,7 @@ export function fingerprintNewsletterOwnerBundle(files) {
   const validated = files.map((entry) => {
     if (!entry || typeof entry !== 'object' ||
         typeof entry.path !== 'string' ||
-        !/^[a-zA-Z0-9_./-]+\\.(?:mjs|js)$/.test(entry.path) ||
+        !/^[a-zA-Z0-9_./-]+\.(?:mjs|js)$/.test(entry.path) ||
         entry.path.startsWith('/') ||
         entry.path.split('/').some((part) => part === '.' || part === '..' || !part) ||
         !Buffer.isBuffer(entry.bytes) ||
@@ -20,7 +20,7 @@ export function fingerprintNewsletterOwnerBundle(files) {
   }).sort((a, b) => a.path < b.path ? -1 : a.path > b.path ? 1 : 0);
 
   const digest = createHash('sha256');
-  digest.update('vellira-owner-js-bundle-v1\\0', 'utf8');
+  digest.update('vellira-owner-js-bundle-v1\0', 'utf8');
   let totalBytes = 0;
   let previous;
   for (const entry of validated) {
