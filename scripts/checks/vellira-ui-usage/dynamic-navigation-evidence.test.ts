@@ -155,7 +155,9 @@ describe('dynamic website navigation evidence (source contracts)', () => {
     ).toBe(false);
   });
 
-  it('keeps canonical link fail-closed for missing href and routes internal links', () => {
+  it(
+    'keeps canonical link fail-closed for missing href and routes internal links',
+    () => {
     const source = sourceOf('components/navigation/DesignSystemLink.tsx');
     const required = [
       'if (!href) return <>{children}</>;',
@@ -167,5 +169,6 @@ describe('dynamic website navigation evidence (source contracts)', () => {
       expect(source.includes(expression)).toBe(true);
       expect(source.replaceAll(expression, '')).not.toContain(expression);
     }
-  });
+    }
+  );
 });
