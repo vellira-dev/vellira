@@ -1545,7 +1545,7 @@ FF3A FF5A
 `.trim();
 
 const fullCaseFoldMap = new Map<number, string>(
-  caseFoldRows.split('\\n').map((line): [number, string] => {
+  caseFoldRows.split('\n').map((line): [number, string] => {
     const [source, ...target] = line.split(' ');
     if (source === undefined || target.length === 0)
       throw new Error('Invalid pinned Unicode CaseFolding data.');
@@ -1577,11 +1577,11 @@ export function numericLabelKeyUnicode151(value: string): string {
 export function isCanonicalNumericLabelUnicode151(value: unknown): value is string {
   if (typeof value !== 'string') return false;
   const size = Array.from(value).length;
-  if (size < 1 || size > 120 || !/\\S/u.test(value)) return false;
+  if (size < 1 || size > 120 || !/\S/u.test(value)) return false;
   if (value !== value.trim() || value.includes('  ')) return false;
-  if (/[\\p{Cc}\\p{Cf}]/u.test(value)) return false;
+  if (/[\p{Cc}\p{Cf}]/u.test(value)) return false;
   for (const character of value) {
-    if (/\\s/u.test(character) && character !== ' ') return false;
+    if (/\s/u.test(character) && character !== ' ') return false;
   }
   return true;
 }
