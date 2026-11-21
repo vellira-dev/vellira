@@ -116,9 +116,12 @@ describe('dynamic website navigation evidence (source contracts)', () => {
         )
       )
     ).toBe(false);
-    expect(validReleaseSource(source.replace("rel='noreferrer'", ''))).toBe(
-      false
+    const releaseLinkWithoutRel = source.replace(
+      /rel='noreferrer'(\s*>\s*Read changelog)/,
+      "rel='unsafe'$1"
     );
+    expect(releaseLinkWithoutRel).not.toBe(source);
+    expect(validReleaseSource(releaseLinkWithoutRel)).toBe(false);
   });
 
   it('uses fixed canonical source destinations for both preview modes', () => {
@@ -162,7 +165,7 @@ describe('dynamic website navigation evidence (source contracts)', () => {
     ];
     for (const expression of required) {
       expect(source.includes(expression)).toBe(true);
-      expect(source.replace(expression, '')).not.toContain(expression);
+      expect(source.replaceAll(expression, '')).not.toContain(expression);
     }
   });
 });
