@@ -158,17 +158,17 @@ describe('dynamic website navigation evidence (source contracts)', () => {
   it(
     'keeps canonical link fail-closed for missing href and routes internal links',
     () => {
-    const source = sourceOf('components/navigation/DesignSystemLink.tsx');
-    const required = [
-      'if (!href) return <>{children}</>;',
-      "const internal = href.startsWith('/');",
-      '<NextLink href={href} prefetch={prefetch} target={target} rel={rel}>',
-      'href={href}',
-    ];
-    for (const expression of required) {
-      expect(source.includes(expression)).toBe(true);
-      expect(source.replaceAll(expression, '')).not.toContain(expression);
-    }
+      const source = sourceOf('components/navigation/DesignSystemLink.tsx');
+      const required = [
+        'if (!href) return <>{children}</>;',
+        "const internal = href.startsWith('/');",
+        '<NextLink href={href} prefetch={prefetch} target={target} rel={rel}>',
+        'href={href}',
+      ];
+      for (const expression of required) {
+        expect(source.includes(expression)).toBe(true);
+        expect(source.replaceAll(expression, '')).not.toContain(expression);
+      }
     }
   );
 });
