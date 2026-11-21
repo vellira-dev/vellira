@@ -18,7 +18,8 @@ const contracts: Evidence[] = [
     line: 34,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'preserves active location and drawer close callback for catalog navigation',
+    testTitle:
+      'preserves active location and drawer close callback for catalog navigation',
     scope: 'source-contract',
   },
   {
@@ -26,7 +27,8 @@ const contracts: Evidence[] = [
     line: 105,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'preserves active state and intercepted components navigation in AppShell',
+    testTitle:
+      'preserves active state and intercepted components navigation in AppShell',
     scope: 'source-contract',
   },
   {
@@ -34,7 +36,8 @@ const contracts: Evidence[] = [
     line: 120,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'preserves active state and intercepted components navigation in AppShell',
+    testTitle:
+      'preserves active state and intercepted components navigation in AppShell',
     scope: 'source-contract',
   },
   {
@@ -49,31 +52,38 @@ const contracts: Evidence[] = [
     path: 'apps/website/src/components/navigation/DesignSystemLink.tsx',
     line: 56,
     kind: 'canonical-button',
-    testFile: 'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
-    testTitle: 'keeps canonical link fail-closed for missing href and routes internal links',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle:
+      'keeps canonical link fail-closed for missing href and routes internal links',
     scope: 'source-contract',
   },
   {
     path: 'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx',
     line: 75,
     kind: 'canonical-button',
-    testFile: 'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
-    testTitle: 'uses fixed canonical source destinations for both preview modes',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle:
+      'uses fixed canonical source destinations for both preview modes',
     scope: 'source-contract',
   },
   {
     path: 'apps/website/src/sections/home/ProductInterfaceDemo/ProductInterfaceDemo.tsx',
     line: 84,
     kind: 'canonical-button',
-    testFile: 'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
-    testTitle: 'uses fixed canonical source destinations for both preview modes',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle:
+      'uses fixed canonical source destinations for both preview modes',
     scope: 'source-contract',
   },
   {
     path: 'apps/website/src/sections/home/Roadmap/Roadmap.tsx',
     line: 362,
     kind: 'canonical-button',
-    testFile: 'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
     testTitle: 'keeps release URL in the fixed GitHub releases namespace',
     scope: 'source-contract',
   },
