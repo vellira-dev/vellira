@@ -9,6 +9,14 @@ import type { ComponentPlatform } from '../types';
 
 // component-page-imports
 import {
+  AvatarAccessibility,
+  AvatarDemo,
+  AvatarExamples,
+  AvatarUsage,
+  NativeAvatarDemo,
+  avatarApi,
+} from '../components/Avatar';
+import {
   TextareaAccessibility,
   TextareaDemo,
   TextareaExamples,
@@ -162,6 +170,51 @@ type ComponentPageConfig = {
 
 export const componentPages = {
   // component-page-entries
+  avatar: {
+    name: 'Avatar',
+    discovery: {
+      status: 'complete',
+      summary:
+        'Display a person, account, or entity using an image with a named text fallback.',
+      description:
+        'Avatar presents a compact, accessible identity marker. It shows a deterministic fallback while an image is unavailable or loading.',
+      whenToUse: [
+        'Use it to identify people, accounts, teams, or other entities in compact interface areas.',
+        'Provide a short fallback and a human-readable name for every avatar.',
+      ],
+      patterns: [
+        {
+          id: 'identity-image',
+          title: 'Identity image',
+          description:
+            'Use a source when an image is available while retaining initials or a short label as the fallback.',
+        },
+        {
+          id: 'fallback-only',
+          title: 'Fallback only',
+          description:
+            'Use the fallback directly when no image source is available.',
+        },
+      ],
+      platformNotes: {
+        react: [
+          'The web implementation exposes the avatar as an image role named by the name prop.',
+        ],
+        'react-native': [
+          'The native implementation uses image accessibility semantics and keeps its nested image decorative.',
+        ],
+      },
+    },
+    demos: {
+      react: AvatarDemo,
+      'react-native': NativeAvatarDemo,
+    },
+    Usage: AvatarUsage,
+    Examples: AvatarExamples,
+    Accessibility: AvatarAccessibility,
+    api: avatarApi,
+    related: [],
+  },
   textarea: {
     name: 'Textarea',
     discovery: {

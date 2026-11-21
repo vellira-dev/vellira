@@ -4,11 +4,13 @@
 import type { ComponentType } from 'react';
 
 import { AccordionCatalogPreview } from '../components/Accordion/AccordionCatalogPreview';
+import { AvatarCatalogPreview } from '../components/Avatar/AvatarCatalogPreview';
 import { SwitchCatalogPreview } from '../components/Switch/SwitchCatalogPreview';
 import { TextareaCatalogPreview } from '../components/Textarea/TextareaCatalogPreview';
 
 export const generatedCatalogPreviews = {
   accordion: AccordionCatalogPreview,
+  avatar: AvatarCatalogPreview,
   switch: SwitchCatalogPreview,
   textarea: TextareaCatalogPreview,
 } as const satisfies Record<string, ComponentType>;

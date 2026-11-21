@@ -199,4 +199,17 @@ export const componentCatalogPresentation = [
       'react-native': 'https://docs.vellira.dev/react-native/textarea',
     },
   },
+  {
+    component: 'Avatar',
+    slug: 'avatar',
+    name: 'Avatar',
+    description:
+      'Avatar presents a compact, accessible identity marker. It shows a deterministic fallback while an image is unavailable or loading.',
+    category: 'data-display',
+    order: 999,
+    docs: {
+      react: 'https://docs.vellira.dev/react/avatar',
+      'react-native': 'https://docs.vellira.dev/react-native/avatar',
+    },
+  },
 ] as const satisfies readonly ComponentCatalogPresentationEntry[];
