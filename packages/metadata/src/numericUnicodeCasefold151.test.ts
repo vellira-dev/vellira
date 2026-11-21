@@ -80,5 +80,4 @@ describe('pinned Unicode 15.1 full casefold (proposed Numeric contract)', () => 
       numericLabelKeyUnicode151('é')
     );
   });
-
 });
