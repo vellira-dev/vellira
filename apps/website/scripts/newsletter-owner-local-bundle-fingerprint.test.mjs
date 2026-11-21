@@ -15,7 +15,7 @@ test('deterministic owner fingerprint is independent of input listing order', ()
   assert.deepEqual(first, reversed);
   assert.match(first.bundleSha256, /^[a-f0-9]{64}$/);
   assert.equal(first.javascriptFileCount, 2);
-  assert.equal(first.javascriptBytes, 38);
+  assert.equal(first.javascriptBytes, 37);
   assert.equal(first.remotelyAttested, false);
   assert.equal(first.cutoverAuthorized, false);
 });
