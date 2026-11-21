@@ -4,10 +4,6 @@
   "slug": "pr-2023-showcase-native-starter-instead-of-mobile-web-dashboard",
   "publishedAt": "2026-11-20",
   "author": "Roman Bakurov",
-  "tags": [
-    "React Native",
-    "Engineering",
-    "Vellira"
-  ],
+  "tags": ["React Native", "Engineering", "Vellira"],
   "draft": true
 }
