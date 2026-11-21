@@ -17,9 +17,9 @@ export class NewsletterFixedUtcTransactionalCandidate {
   async fetch(request) {
     if (
       request.method !== 'POST' ||
-      new URL(request.url).pathname !== '/admit'
+      new globalThis.URL(request.url).pathname !== '/admit'
     ) {
-      return new Response(null, { status: 404 });
+      return new globalThis.Response(null, { status: 404 });
     }
 
     const capacity = Number(this.env.NEWSLETTER_GLOBAL_BUDGET_CAPACITY);
