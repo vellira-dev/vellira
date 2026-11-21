@@ -171,6 +171,33 @@ test('unknown markers and inconsistent cutover fail closed', async (t) => {
   assert.equal((await attempt(fixed, 'fixed', 1_000)).status, 503);
 });
 
+test('unmarked fixed state blocks both versions without mutation', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'vellira-version-partial-'));
+  t.after(() => fs.rm(dir, { recursive: true, force: true }));
+  const mf = localWorkers(dir);
+  t.after(() => mf.dispose());
+  const owner = await mf.getWorker('version-fence-local-owner');
+  const seed = await owner.fetch('https://budget.internal/__test/seed', {
+    method: 'POST',
+    body: JSON.stringify({
+      key: 'fixed-utc-v1',
+      value: { dayStart: 0, spent: 1, lastSeen: 1_000 },
+    }),
+  });
+  assert.equal(seed.status, 204);
+  const legacy = await mf.getWorker('local-legacy-site');
+  const fixed = await mf.getWorker('local-fixed-site');
+  assert.equal((await attempt(legacy, 'legacy', 2_000)).status, 503);
+  assert.equal((await attempt(fixed, 'fixed', 2_000)).status, 503);
+  const state = await (await owner.fetch('https://budget.internal/__test/state')).json();
+  assert.equal(state.version, null);
+  assert.deepEqual(state.fixed, {
+    dayStart: 0,
+    spent: 1,
+    lastSeen: 1_000,
+  });
+});
+
 test('failed fence persistence never acknowledges an admission', async () => {
   const coordinator = new NewsletterVersionFenceCandidate(
     {
