@@ -1,6 +1,5 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const ts = require('typescript');
 
 const ROOT = Object.freeze({
   'vellira-source': './src/index.ts',
@@ -11,32 +10,51 @@ const ROOT = Object.freeze({
 });
 
 const catalog = require('../../packages/react-native/native-subpaths.json');
-if (Object.keys(catalog).length !== 17 ||
-    Object.entries(catalog).some(([key, source]) =>
+if (
+  Object.keys(catalog).length !== 17 ||
+  Object.entries(catalog).some(
+    ([key, source]) =>
       !/^[a-z]+(?:-[a-z]+)*$/.test(key) ||
-      !/^src\/(?:components|patterns|primitives|theme)\/[A-Za-z]+(?:\/[A-Za-z]+)*\/index\.ts$/.test(source) &&
-      source !== 'src/theme/index.ts'
-    )) {
+      (!/^src\/(?:components|patterns|primitives|theme)\/[A-Za-z]+(?:\/[A-Za-z]+)*\/index\.ts$/.test(
+        source
+      ) &&
+        source !== 'src/theme/index.ts')
+  )
+) {
   throw new Error('Invalid canonical Native shared-subpath catalog.');
 }
 
-const SUBPATHS = Object.freeze(Object.fromEntries(
-  Object.entries(catalog).map(([name, source]) => {
-    const js = './dist/' + name + '.js';
-    return ['./' + name, Object.freeze({
-      'vellira-source': './' + source,
-      types: './dist/' + source.slice(4).replace(/\.ts$/, '.d.ts'),
-      'react-native': js,
-      import: js,
-      default: js,
-    })];
-  })
-));
+const SUBPATHS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(catalog).map(([name, source]) => {
+      const js = './dist/' + name + '.js';
+      return [
+        './' + name,
+        Object.freeze({
+          'vellira-source': './' + source,
+          types: './dist/' + source.slice(4).replace(/\.ts$/, '.d.ts'),
+          'react-native': js,
+          import: js,
+          default: js,
+        }),
+      ];
+    })
+  )
+);
 
 // Requires one complete export set. Historical root-only fixtures may
 // explicitly opt in to compatibility inspection, never release admission.
-function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false } = {}) {
+function assertNativeSubpathContract(
+  packageDir,
+  { allowLegacyRootOnly = false } = {}
+) {
   const rootDir = path.resolve(packageDir);
+  // In clean Expo jobs TypeScript is installed inside the consumer fixture,
+  // not the checkout. Prefer that pinned compiler, falling back to local
+  // tooling only for repository-based probes. Never skip the AST validator.
+  const ts = require(
+    require.resolve('typescript', { paths: [rootDir, __dirname] })
+  );
   const manifest = JSON.parse(
     fs.readFileSync(path.join(rootDir, 'package.json'), 'utf8')
   );
@@ -44,8 +62,11 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
   if (JSON.stringify(exported['.']) !== JSON.stringify(ROOT)) {
     throw new Error('React Native root export contract changed');
   }
-  if (manifest.main !== ROOT.default || manifest.types !== ROOT.types ||
-      manifest['react-native'] !== ROOT['react-native']) {
+  if (
+    manifest.main !== ROOT.default ||
+    manifest.types !== ROOT.types ||
+    manifest['react-native'] !== ROOT['react-native']
+  ) {
     throw new Error('React Native legacy entry fields changed');
   }
   const keys = Object.keys(SUBPATHS);
@@ -71,8 +92,10 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
   }
   for (const relative of targets) {
     const absolute = path.resolve(rootDir, relative);
-    if (!absolute.startsWith(rootDir + path.sep) ||
-        !fs.statSync(absolute, { throwIfNoEntry: false })?.isFile()) {
+    if (
+      !absolute.startsWith(rootDir + path.sep) ||
+      !fs.statSync(absolute, { throwIfNoEntry: false })?.isFile()
+    ) {
       throw new Error('Missing packed native export target: ' + relative);
     }
   }
@@ -81,33 +104,49 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
   // whose entry files exist but whose imported chunk is absent must fail.
   const dist = path.join(rootDir, 'dist');
   const seen = new Set();
-  const pending = targets.filter((x) => x.endsWith('.js')).map(
-    (x) => path.resolve(rootDir, x)
-  );
+  const pending = targets
+    .filter((x) => x.endsWith('.js'))
+    .map((x) => path.resolve(rootDir, x));
   function collectJsImports(file, code) {
     const parsed = ts.createSourceFile(
-      file, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS
+      file,
+      code,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.JS
     );
     if (parsed.parseDiagnostics.length) {
-      throw new Error('Unparseable packed Native JS: ' + file +
-        ': ' + ts.flattenDiagnosticMessageText(
-          parsed.parseDiagnostics[0].messageText, '\\n'
-        ));
+      throw new Error(
+        'Unparseable packed Native JS: ' +
+          file +
+          ': ' +
+          ts.flattenDiagnosticMessageText(
+            parsed.parseDiagnostics[0].messageText,
+            '\\n'
+          )
+      );
     }
     const edges = [];
     const visit = (node) => {
-      if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-          node.moduleSpecifier) {
+      if (
+        (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+        node.moduleSpecifier
+      ) {
         if (!ts.isStringLiteral(node.moduleSpecifier)) {
           throw new Error('Nonliteral packed Native JS import: ' + file);
         }
         edges.push(node.moduleSpecifier.text);
       }
-      if (ts.isCallExpression(node) &&
-          (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
-            (ts.isIdentifier(node.expression) && node.expression.text === 'require'))) {
-        if (node.arguments.length !== 1 ||
-            !ts.isStringLiteral(node.arguments[0])) {
+      if (
+        ts.isCallExpression(node) &&
+        (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+          (ts.isIdentifier(node.expression) &&
+            node.expression.text === 'require'))
+      ) {
+        if (
+          node.arguments.length !== 1 ||
+          !ts.isStringLiteral(node.arguments[0])
+        ) {
           throw new Error('Nonliteral packed Native JS import: ' + file);
         }
         edges.push(node.arguments[0].text);
@@ -120,8 +159,10 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
   while (pending.length) {
     const file = pending.pop();
     if (seen.has(file)) continue;
-    if (!file.startsWith(dist + path.sep) ||
-        !fs.statSync(file, { throwIfNoEntry: false })?.isFile()) {
+    if (
+      !file.startsWith(dist + path.sep) ||
+      !fs.statSync(file, { throwIfNoEntry: false })?.isFile()
+    ) {
       throw new Error('Missing packed native JS chunk: ' + file);
     }
     seen.add(file);
@@ -129,7 +170,9 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
     for (const specifier of collectJsImports(file, code)) {
       const target = path.resolve(path.dirname(file), specifier);
       if (!target.startsWith(dist + path.sep) || !target.endsWith('.js')) {
-        throw new Error('Unsafe native JS chunk import: ' + file + ' -> ' + specifier);
+        throw new Error(
+          'Unsafe native JS chunk import: ' + file + ' -> ' + specifier
+        );
       }
       pending.push(target);
     }
@@ -137,20 +180,28 @@ function assertNativeSubpathContract(packageDir, { allowLegacyRootOnly = false }
   if (present.length) {
     // Reject JS that was accidentally staged by legacy subpath probes or
     // included by an overbroad npm files glob but is not in the entry graph.
-    const walk = (folder) => fs.readdirSync(folder, { withFileTypes: true })
-      .flatMap((entry) => {
+    const walk = (folder) =>
+      fs.readdirSync(folder, { withFileTypes: true }).flatMap((entry) => {
         const file = path.join(folder, entry.name);
-        return entry.isDirectory() ? walk(file) : entry.isFile() && file.endsWith('.js') ? [file] : [];
+        return entry.isDirectory()
+          ? walk(file)
+          : entry.isFile() && file.endsWith('.js')
+            ? [file]
+            : [];
       });
     const unreferenced = walk(dist).filter((file) => !seen.has(file));
     if (unreferenced.length) {
       throw new Error(
         'Unreferenced native JS files would be published: ' +
-        unreferenced.map((file) => path.relative(dist, file)).join(', ')
+          unreferenced.map((file) => path.relative(dist, file)).join(', ')
       );
     }
   }
-  return { enabled: present.length > 0, checkedTargets: targets.length, checkedJsFiles: seen.size };
+  return {
+    enabled: present.length > 0,
+    checkedTargets: targets.length,
+    checkedJsFiles: seen.size,
+  };
 }
 
 module.exports = { ROOT, SUBPATHS, assertNativeSubpathContract };

@@ -26,10 +26,12 @@ function withFixture(exports, run) {
       })
     );
     const targets = new Set([
-      'dist/index.js', 'dist/index.d.ts',
-      ...Object.values(SUBPATHS).flatMap((entry) =>
-        [entry.default.slice(2), entry.types.slice(2)]
-      ),
+      'dist/index.js',
+      'dist/index.d.ts',
+      ...Object.values(SUBPATHS).flatMap((entry) => [
+        entry.default.slice(2),
+        entry.types.slice(2),
+      ]),
     ]);
     for (const file of targets) {
       const target = path.join(root, file);
@@ -45,12 +47,20 @@ function withFixture(exports, run) {
 test('catalog covers all 17 currently published native runtime components', () => {
   assert.equal(keys.length, 17);
   assert.deepEqual(
-    keys.filter((key) => ['.', './button', './select', './theme'].includes(key)),
+    keys.filter((key) =>
+      ['.', './button', './select', './theme'].includes(key)
+    ),
     ['./button', './select', './theme']
   );
-  assert.equal(SUBPATHS['./button'].types, './dist/primitives/Button/index.d.ts');
+  assert.equal(
+    SUBPATHS['./button'].types,
+    './dist/primitives/Button/index.d.ts'
+  );
   assert.equal(SUBPATHS['./select'].default, './dist/select.js');
-  assert.equal(SUBPATHS['./select']['vellira-source'], './src/components/Select/index.ts');
+  assert.equal(
+    SUBPATHS['./select']['vellira-source'],
+    './src/components/Select/index.ts'
+  );
   assert.equal(SUBPATHS['./theme'].types, './dist/theme/index.d.ts');
 });
 
@@ -84,15 +94,18 @@ test('rejects partial rollout, changed root, and unexpected exports', () => {
       /introduced together/
     );
   });
-  withFixture({
-    '.': { ...ROOT, default: './dist/button.js' },
-    ...SUBPATHS,
-  }, (dir) => {
-    assert.throws(
-      () => assertNativeSubpathContract(dir),
-      /root export contract changed/
-    );
-  });
+  withFixture(
+    {
+      '.': { ...ROOT, default: './dist/button.js' },
+      ...SUBPATHS,
+    },
+    (dir) => {
+      assert.throws(
+        () => assertNativeSubpathContract(dir),
+        /root export contract changed/
+      );
+    }
+  );
   withFixture({ '.': ROOT, ...SUBPATHS, './unsafe': './dist/x.js' }, (dir) => {
     assert.throws(
       () => assertNativeSubpathContract(dir),
@@ -137,7 +150,10 @@ test('rejects imports escaping the packed dist graph', () => {
 test('rejects an unreferenced or experimental JS chunk in the publishable tree', () => {
   withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
     fs.mkdirSync(path.join(dir, 'dist/shared-proof'), { recursive: true });
-    fs.writeFileSync(path.join(dir, 'dist/shared-proof/index.js'), 'export {};\\n');
+    fs.writeFileSync(
+      path.join(dir, 'dist/shared-proof/index.js'),
+      'export {};\\n'
+    );
     assert.throws(
       () => assertNativeSubpathContract(dir),
       /Unreferenced native JS files would be published/
@@ -147,7 +163,10 @@ test('rejects an unreferenced or experimental JS chunk in the publishable tree',
 
 test('accepts shared chunks consumed by root and leaf entries once', () => {
   withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
-    fs.writeFileSync(path.join(dir, 'dist/chunk-shared.js'), 'export const shared = 1;\n');
+    fs.writeFileSync(
+      path.join(dir, 'dist/chunk-shared.js'),
+      'export const shared = 1;\n'
+    );
     for (const name of ['index.js', 'button.js', 'theme.js']) {
       fs.writeFileSync(
         path.join(dir, 'dist', name),
@@ -183,9 +202,9 @@ test('rejects missing chunks reached via comments, re-exports and multiline impo
 test('rejects computed dynamic import and require expressions, even if string-like', () => {
   const examples = [
     "import('./' + 'missing.js');",
-    "import(`./missing-${name}.js`);",
+    'import(`./missing-${name}.js`);',
     "require('./' + name);",
-    "import(variable);",
+    'import(variable);',
   ];
   for (const code of examples) {
     withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
@@ -201,10 +220,11 @@ test('rejects computed dynamic import and require expressions, even if string-li
 
 test('parses comments and strings without creating fake import edges', () => {
   withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
-    fs.writeFileSync(path.join(dir, 'dist/button.js'),
+    fs.writeFileSync(
+      path.join(dir, 'dist/button.js'),
       '// import("./not-an-edge.js")\n' +
-      'const text = "export * from ./not-an-edge.js";\n' +
-      'export {};\n'
+        'const text = "export * from ./not-an-edge.js";\n' +
+        'export {};\n'
     );
     assert.equal(assertNativeSubpathContract(dir).checkedJsFiles, 18);
   });
@@ -216,6 +236,23 @@ test('rejects syntactically invalid packed JS', () => {
     assert.throws(
       () => assertNativeSubpathContract(dir),
       /Unparseable packed Native JS/
+    );
+  });
+});
+
+// A clean consumer job does not install the monorepo node_modules. TypeScript
+// lives under its independently installed fixture; resolve it from there.
+test('loads TypeScript from the installed consumer before local tooling', () => {
+  withFixture({ '.': ROOT, ...SUBPATHS }, (dir) => {
+    const compilerDir = path.join(dir, 'node_modules/typescript');
+    fs.mkdirSync(compilerDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(compilerDir, 'index.js'),
+      "throw new Error('consumer-installed-compiler-selected');\n"
+    );
+    assert.throws(
+      () => assertNativeSubpathContract(dir),
+      /consumer-installed-compiler-selected/
     );
   });
 });
