@@ -8,6 +8,8 @@ import test from 'node:test';
 
 const require = createRequire(import.meta.url);
 
+import { fingerprintNewsletterOwnerBundle } from './newsletter-owner-local-bundle-fingerprint.mjs';
+
 const website = path.resolve(import.meta.dirname, '..');
 const ownerConfig = path.join(
   website,
@@ -110,6 +112,16 @@ test('pinned Wrangler compiles owner candidate without deployment or credentials
 
   const files = javascriptFiles(outdir);
   assert.ok(files.length > 0, 'Wrangler dry-run emitted no JavaScript bundle');
+  // Compute a local digest over the exact pinned dry-run outputs, never a
+  // claim that Cloudflare is serving these bytes.
+  const evidence = fingerprintNewsletterOwnerBundle(files.map((file) => ({
+    path: path.relative(outdir, file).split(path.sep).join('/'),
+    bytes: fs.readFileSync(file),
+  })));
+  assert.match(evidence.bundleSha256, /^[a-f0-9]{64}$/);
+  assert.equal(evidence.javascriptFileCount, files.length);
+  assert.equal(evidence.remotelyAttested, false);
+  assert.equal(evidence.cutoverAuthorized, false);
   const bundle = files.map((file) => fs.readFileSync(file, 'utf8')).join('\n');
   assert.match(bundle, /NewsletterRollingBudgetCoordinator/);
   assert.doesNotMatch(bundle, /BUTTONDOWN_API_KEY|api\.buttondown\.com/);
