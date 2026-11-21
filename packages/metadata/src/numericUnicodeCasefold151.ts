@@ -1574,7 +1574,9 @@ export function numericLabelKeyUnicode151(value: string): string {
 }
 
 /** Proposed policy only; no Component Program or Factory authority. */
-export function isCanonicalNumericLabelUnicode151(value: unknown): value is string {
+export function isCanonicalNumericLabelUnicode151(
+  value: unknown
+): value is string {
   if (typeof value !== 'string') return false;
   const size = Array.from(value).length;
   if (size < 1 || size > 120 || !/\S/u.test(value)) return false;
