@@ -51,6 +51,36 @@ export function Example() {
 }
 ```
 
+## Smaller native bundles — shared component entrypoints (opt-in)
+
+For apps that use only a subset of Vellira Native components, prefer **leaf
+imports**. Each public entry shares the **same compiled runtime graph** as the
+legacy root, including one ThemeContext and common utility modules:
+
+```tsx
+import { Button } from '@vellira-ui/react-native/button';
+import { Select } from '@vellira-ui/react-native/select';
+import { ThemeProvider, useTheme } from '@vellira-ui/react-native/theme';
+```
+
+The existing `import { Button, Select } from '@vellira-ui/react-native'`
+remains supported and is the compatibility default. It may include the whole
+public component graph in Metro even if the app uses one component; switching to
+a leaf import is **explicit**. The complete list of subpaths is maintained in
+`packages/react-native/native-subpaths.json` (e.g. `/input`, `/checkbox`,
+`/radio-group`, `/dropdown`, `/modal`, `/form-field`, `/portal`).
+
+Do not mix packages from different Vellira versions. Using root and leaf imports
+from the **same installed version** is supported by the shared-graph build, but
+the root itself may defeat the size saving. Prefer leaf imports consistently in
+small apps. This optimization does **not** split the native app binary, create
+runtime lazy loading, or reduce the cost of React Native and Expo themselves.
+
+Measure actual iOS/Android production Metro exports of your own app before
+claiming a specific byte saving; emitted JS is not equivalent to on-device
+memory, install size, or startup latency. Do not import unpublished `dist/`
+files or rely on test-only experimental subpath probes.
+
 ## Components
 
 ### Inputs

@@ -105,6 +105,9 @@ export const createPresentationStyles = (theme: NativeTheme) => {
       borderTopLeftRadius: theme.tokens.radius.lg,
       borderTopRightRadius: theme.tokens.radius.lg,
       borderBottomWidth: 0,
+      // Space the last option from the bottom edge; avoid a fixed iPhone-only
+      // safe-area number. The enclosing modal still obeys its viewport cap.
+      paddingBottom: theme.tokens.spacing[4],
     },
 
     modalPresentation: {

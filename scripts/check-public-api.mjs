@@ -17,7 +17,12 @@ const packageExportContracts = {
   ],
   'packages/core/package.json': ['.'],
   'packages/icons/package.json': ['.', './lottie', './native', './web'],
-  'packages/react-native/package.json': ['.'],
+  'packages/react-native/package.json': [
+    '.',
+    ...Object.keys(JSON.parse(readFileSync(
+      path.join(root, 'packages/react-native/native-subpaths.json'), 'utf8'
+    ))).map((name) => './' + name),
+  ],
   'packages/tokens/package.json': ['.', './css'],
   'packages/types/package.json': ['.'],
   'packages/react/package.json': ['.', './styles', './styles/button'],
