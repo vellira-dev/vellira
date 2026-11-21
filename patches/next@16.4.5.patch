@@ -1,8 +1,8 @@
 diff --git a/dist/client/components/app-router.js b/dist/client/components/app-router.js
-index 6b95b72..66c50d5 100644
+index 6b95b72..661984b 100644
 --- a/dist/client/components/app-router.js
 +++ b/dist/client/components/app-router.js
-@@ -201,6 +201,11 @@ function Head({ headRenderTree }) {
+@@ -201,13 +201,17 @@ function Head({ headRenderTree }) {
          // would trigger the mpa navigation logic again from the lines below.
          // This will restore the router to the initial state in the event that the app is restored from bfcache.
          function handlePageShow(event) {
@@ -14,10 +14,26 @@ index 6b95b72..66c50d5 100644
              if (!event.persisted || !window.history.state?.__PRIVATE_NEXTJS_INTERNALS_TREE) {
                  return;
              }
-@@ -254,11 +259,25 @@ function Head({ headRenderTree }) {
+-            // Clear the pendingMpaPath value so that a subsequent MPA navigation to the same URL can be triggered.
+-            // This is necessary because if the browser restored from bfcache, the pendingMpaPath would still be set to the value
+-            // of the last MPA navigation.
+-            globalMutable.pendingMpaPath = undefined;
++            // A bfcache restore resumes a document with a fresh navigation
++            // lifetime. Forget the previous hard-navigation render identity.
++            globalMutable.pendingMpaNavigation = undefined;
+             (0, _navigator.restore)(new URL(window.location.href), window.history.state.__PRIVATE_NEXTJS_INTERNALS_TREE);
+         }
+         window.addEventListener('pageshow', handlePageShow);
+@@ -252,15 +256,31 @@ function Head({ headRenderTree }) {
+     // but that's... fine?)
+     const { pushRef } = state;
      if (pushRef.mpaNavigation) {
-         // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
-         if (globalMutable.pendingMpaPath !== canonicalUrl) {
+-        // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
+-        if (globalMutable.pendingMpaPath !== canonicalUrl) {
++        // Deduplicate only re-renders of one MPA transition. The browser can
++        // abandon it (HTTP 204 / dismissed beforeunload) without telling JS.
++        // A NEW pushRef must be allowed to retry the same canonical URL.
++        if (globalMutable.pendingMpaNavigation !== pushRef) {
 +            // Bind the navigation epoch to its source document and destination.
 +            // This also invalidates old prefetches awaiting their async _rsc hash.
 +            const velliraMpaEpochKey = Symbol.for('vellira.next2130.mpaEpoch.v1');
@@ -42,8 +58,11 @@ index 6b95b72..66c50d5 100644
 +                globalThis[velliraMpaEpochKey] = velliraPreviousEpoch;
 +                throw error;
              }
-             globalMutable.pendingMpaPath = canonicalUrl;
+-            globalMutable.pendingMpaPath = canonicalUrl;
++            globalMutable.pendingMpaNavigation = pushRef;
          }
+         // TODO-APP: Should we listen to navigateerror here to catch failed
+         // navigations somehow? And should we call window.stop() if a SPA navigation
 diff --git a/dist/client/components/router-reducer/fetch-server-response.js b/dist/client/components/router-reducer/fetch-server-response.js
 index b446c3b..67abeb4 100644
 --- a/dist/client/components/router-reducer/fetch-server-response.js
@@ -114,10 +133,10 @@ index b446c3b..67abeb4 100644
              fetchPromise = processed.then(({ response })=>response);
              flightResponsePromise = shouldImmediatelyDecode ? decodeFlightResponse(fetchPromise, headers, signal) : null;
 diff --git a/dist/esm/client/components/app-router.js b/dist/esm/client/components/app-router.js
-index 8124899..904d0be 100644
+index 8124899..4b5ffd3 100644
 --- a/dist/esm/client/components/app-router.js
 +++ b/dist/esm/client/components/app-router.js
-@@ -189,6 +189,11 @@ function Head({ headRenderTree }) {
+@@ -189,13 +189,17 @@ function Head({ headRenderTree }) {
          // would trigger the mpa navigation logic again from the lines below.
          // This will restore the router to the initial state in the event that the app is restored from bfcache.
          function handlePageShow(event) {
@@ -129,10 +148,26 @@ index 8124899..904d0be 100644
              if (!event.persisted || !window.history.state?.__PRIVATE_NEXTJS_INTERNALS_TREE) {
                  return;
              }
-@@ -242,11 +247,25 @@ function Head({ headRenderTree }) {
+-            // Clear the pendingMpaPath value so that a subsequent MPA navigation to the same URL can be triggered.
+-            // This is necessary because if the browser restored from bfcache, the pendingMpaPath would still be set to the value
+-            // of the last MPA navigation.
+-            globalMutable.pendingMpaPath = undefined;
++            // A bfcache restore resumes a document with a fresh navigation
++            // lifetime. Forget the previous hard-navigation render identity.
++            globalMutable.pendingMpaNavigation = undefined;
+             restore(new URL(window.location.href), window.history.state.__PRIVATE_NEXTJS_INTERNALS_TREE);
+         }
+         window.addEventListener('pageshow', handlePageShow);
+@@ -240,15 +244,31 @@ function Head({ headRenderTree }) {
+     // but that's... fine?)
+     const { pushRef } = state;
      if (pushRef.mpaNavigation) {
-         // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
-         if (globalMutable.pendingMpaPath !== canonicalUrl) {
+-        // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
+-        if (globalMutable.pendingMpaPath !== canonicalUrl) {
++        // Deduplicate only re-renders of one MPA transition. The browser can
++        // abandon it (HTTP 204 / dismissed beforeunload) without telling JS.
++        // A NEW pushRef must be allowed to retry the same canonical URL.
++        if (globalMutable.pendingMpaNavigation !== pushRef) {
 +            // Bind the navigation epoch to its source document and destination.
 +            // This also invalidates old prefetches awaiting their async _rsc hash.
 +            const velliraMpaEpochKey = Symbol.for('vellira.next2130.mpaEpoch.v1');
@@ -157,8 +192,11 @@ index 8124899..904d0be 100644
 +                globalThis[velliraMpaEpochKey] = velliraPreviousEpoch;
 +                throw error;
              }
-             globalMutable.pendingMpaPath = canonicalUrl;
+-            globalMutable.pendingMpaPath = canonicalUrl;
++            globalMutable.pendingMpaNavigation = pushRef;
          }
+         // TODO-APP: Should we listen to navigateerror here to catch failed
+         // navigations somehow? And should we call window.stop() if a SPA navigation
 diff --git a/dist/esm/client/components/router-reducer/fetch-server-response.js b/dist/esm/client/components/router-reducer/fetch-server-response.js
 index 306f6d5..d8a6e63 100644
 --- a/dist/esm/client/components/router-reducer/fetch-server-response.js

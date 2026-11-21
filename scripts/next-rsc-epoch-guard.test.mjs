@@ -180,3 +180,83 @@ for (const helper of ['isVelliraNext2130StaleDestinationPrefetch','assertVellira
   assert.equal(a,b);
  });
 }
+
+// Upstream Next.js #102146 fix bridge: a fresh App Router pushRef is a new
+// navigation even when the browser abandoned the preceding MPA to this URL.
+// Crucially, this does NOT pretend to detect 204 / dismissed beforeunload or
+// lift Vellira's fail-closed destination-prefetch guard after cancellation.
+function compiledMpaBlock(v) {
+  const filename=path.join(root,'dist',v,'components/app-router.js');
+  const sourceText=fs.readFileSync(filename,'utf8');
+  const ast=ts.createSourceFile(filename,sourceText,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+  const matches=[];
+  function visit(node) {
+    if(ts.isIfStatement(node) && node.expression.getText(ast)==='pushRef.mpaNavigation') {
+      matches.push(node.getText(ast));
+    }
+    ts.forEachChild(node,visit);
+  }
+  visit(ast);
+  assert.equal(matches.length,1,'One published MPA router branch required');
+  return matches[0];
+}
+function makeRouter(v) {
+  const calls=[];
+  const sentinel={isRouterSuspension:true};
+  const location={href:sourceHref,
+    assign(href){calls.push({method:'assign',href});},
+    replace(href){calls.push({method:'replace',href});}
+  };
+  const sandbox={Symbol,URL,window:{location},globalMutable:{},
+    pushRef:undefined,canonicalUrl:targetHref,
+    _unresolvedthenable:{unresolvedThenable:sentinel},unresolvedThenable:sentinel};
+  vm.createContext(sandbox);
+  const block=compiledMpaBlock(v);
+  return {
+    calls,sandbox,location,run(ref,url=targetHref){
+      sandbox.pushRef=ref;sandbox.canonicalUrl=url;
+      try {vm.runInContext(block,sandbox);}
+      catch(error){if(error!==sentinel) throw error;}
+    },
+    epoch(){return vm.runInContext("globalThis[Symbol.for('vellira.next2130.mpaEpoch.v1')]",sandbox);}
+  };
+}
+for(const v of variants){
+  test(`${v}: canceled HTTP 204 permits NEW same-URL MPA attempt`,()=>{
+    const t=makeRouter(v),original={mpaNavigation:true,pendingPush:true},retry={mpaNavigation:true,pendingPush:true};
+    t.run(original);
+    assert.equal(t.calls.length,1);
+    const first=t.epoch();
+    t.run(original);
+    assert.equal(t.calls.length,1,'Re-render of same attempt must be deduplicated');
+    // HTTP 204 leaves old location/document intact. Only new router intent
+    // (new pushRef identity), not elapsed time, permits a navigation retry.
+    t.run(retry);
+    assert.deepEqual(t.calls,[{method:'assign',href:targetHref},{method:'assign',href:targetHref}]);
+    assert.notEqual(t.epoch(),first,'Retry rotates prefetch epoch');
+    assert.equal(t.sandbox.globalMutable.pendingMpaNavigation,retry);
+  });
+  test(`${v}: dismissed beforeunload permits NEW same-URL replace attempt`,()=>{
+    const t=makeRouter(v),original={mpaNavigation:true,pendingPush:false},retry={mpaNavigation:true,pendingPush:false};
+    t.run(original);
+    t.run(original);
+    t.run(retry);
+    assert.deepEqual(t.calls,[{method:'replace',href:targetHref},{method:'replace',href:targetHref}]);
+  });
+  test(`${v}: synchronous rejected MPA retains previous epoch and retry opportunity`,()=>{
+    const t=makeRouter(v),original={mpaNavigation:true,pendingPush:true},retry={mpaNavigation:true,pendingPush:true};
+    t.run(original);
+    const old=t.epoch();
+    t.location.assign=()=>{throw Error('synthetic synchronous location.assign rejection');};
+    assert.throws(()=>t.run(retry),/synthetic synchronous/);
+    assert.equal(t.epoch(),old,'Location.assign throwing must restore the original token');
+    assert.equal(t.sandbox.globalMutable.pendingMpaNavigation,original);
+  });
+  test(`${v}: new retry does not implicitly clear fail-closed B-context prefetch guard`,async()=>{
+    const t=make(v);t.mark();
+    const p=t.start(mpaHeaders());await t.wait(1);t.release(0);
+    await assert.rejects(p,{name:'AbortError'});
+    assert.equal(t.calls.length,0);
+    // This is the separate #2190 limitation, intentionally NOT claimed fixed.
+  });
+}
