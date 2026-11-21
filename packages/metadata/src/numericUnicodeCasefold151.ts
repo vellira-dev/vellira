@@ -1563,7 +1563,7 @@ if (fullCaseFoldMap.size !== numericUnicodeCasefoldMappingCount)
 export function fullCasefoldUnicode151(value: string): string {
   let folded = '';
   for (const character of value) {
-    folded += fullCaseFoldMap.get(character.codePointAt(0)!) ?? character;
+    folded += fullCaseFoldMap.get(character.codePointAt(0) ?? -1) ?? character;
   }
   return folded;
 }
