@@ -80,4 +80,16 @@ describe('pinned Unicode 15.1 full casefold (proposed Numeric contract)', () => 
       numericLabelKeyUnicode151('é')
     );
   });
+
+  it.each(['January  2026', ' A', 'A\\tB', 'A\\u00a0B'])(
+    'preserves previous x-axis label acceptance for %j',
+    (xLabel) => {
+      const input = {
+        series: [{ id: 'revenue', label: 'Revenue' }],
+        rows: [{ x: 1, xLabel, values: { revenue: 2 } }],
+      };
+      expect(validateBoundedNumericSeries(input).ok).toBe(true);
+      expect(input.rows[0]?.xLabel).toBe(xLabel);
+    }
+  );
 });
