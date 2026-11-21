@@ -124,3 +124,36 @@ test('rejects Cloudflare deployment replacement during remote read proof', async
   }), /deployment changed between reads/);
   assert.equal(listReads, 2);
 });
+
+test('passes authenticated release-sync authority to staging proof without mutating Cloudflare', async () => {
+  const f = fixture();
+  let stagingArgs;
+  const result = await verifyCloudflareDeploymentReadOnly({
+    ...f.options,
+    verifyStaging: async args => {
+      stagingArgs = args;
+      return {
+        status: 'runtime-identity-verified',
+        buildId: sha + '-123-1',
+        verifiedMainSha: sha,
+        workerVersion: uuid,
+      };
+    },
+  });
+  assert.equal(stagingArgs.allowVerifiedReleaseSyncAdvance, true);
+  assert.equal(result.verifiedMainSha, sha);
+  assert.equal(f.calls.filter(([system]) => system === 'cloudflare').length, 3);
+});
+
+test('rejects a main advance after staged release-sync attestation', async () => {
+  const f = fixture({ stale: true });
+  await assert.rejects(verifyCloudflareDeploymentReadOnly({
+    ...f.options,
+    verifyStaging: async () => ({
+      status: 'runtime-identity-verified',
+      buildId: sha + '-123-1',
+      verifiedMainSha: 'c'.repeat(40),
+      workerVersion: uuid,
+    }),
+  }), /Main advanced during Cloudflare verification/);
+});
