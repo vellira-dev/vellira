@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
 
 import { waitForRuntimeStability } from './cloudflare-runtime-stabilization.mjs';
+import { verifyStagingReleaseSyncAdvance } from './cloudflare-staging-release-sync-readproof.mjs';
 
 const SHA = /^[0-9a-f]{40}$/;
 const OWNER = 'vellira-dev/vellira';
@@ -17,6 +18,8 @@ export async function verifyStagingActivationReadOnly({
   repository = OWNER,
   githubGet,
   verifyRuntime = waitForRuntimeStability,
+  allowVerifiedReleaseSyncAdvance = false,
+  verifyReleaseSync = verifyStagingReleaseSyncAdvance,
 }) {
   assert.equal(repository, OWNER, 'Only canonical website repository is authorized');
   assert.match(candidateSha ?? '', SHA, 'Expected exact source SHA');
@@ -27,7 +30,16 @@ export async function verifyStagingActivationReadOnly({
 
   // A read-only proof is valid only for the currently selected main commit.
   const main = await githubGet('/repos/' + OWNER + '/git/ref/heads/main');
-  assert.equal(main.object?.sha, candidateSha, 'Main advanced; stale candidate verification denied');
+  const verifiedMainSha = main.object?.sha;
+  assert.match(verifiedMainSha ?? '', SHA, 'Invalid current main SHA');
+  if (verifiedMainSha !== candidateSha) {
+    assert.equal(allowVerifiedReleaseSyncAdvance, true, 'Main advanced; stale candidate verification denied');
+    await verifyReleaseSync({
+      candidateSha,
+      mainSha: verifiedMainSha,
+      githubGet,
+    });
+  }
   const run = await githubGet('/repos/' + OWNER + '/actions/runs/' + stagingRunId);
   assert.equal(run.id, stagingRunId);
   assert.equal(run.repository?.full_name, OWNER);
@@ -58,10 +70,11 @@ export async function verifyStagingActivationReadOnly({
 
   // The commit could advance while network verification is in progress.
   const latest = await githubGet('/repos/' + OWNER + '/git/ref/heads/main');
-  assert.equal(latest.object?.sha, candidateSha, 'Main advanced during verification');
+  assert.equal(latest.object?.sha, verifiedMainSha, 'Main advanced during verification');
   return {
     status: 'runtime-identity-verified',
     sourceSha: candidateSha,
+    verifiedMainSha,
     stagingRunId,
     stagingRunAttempt,
     buildId: expectedBuildId,
