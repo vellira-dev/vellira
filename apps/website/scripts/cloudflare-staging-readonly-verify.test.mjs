@@ -143,3 +143,48 @@ test('main advance during runtime probe invalidates prior evidence', async () =>
   }), /Main advanced during verification/);
   assert.equal(f.runtimeCalls, 1);
 });
+
+test('authenticated release-sync advance preserves original immutable staging identity', async () => {
+  const current = 'b'.repeat(40);
+  const f = fixture({ mainSha: current });
+  let proofs = 0;
+  const result = await verifyStagingActivationReadOnly({
+    ...f.options,
+    allowVerifiedReleaseSyncAdvance: true,
+    verifyReleaseSync: async ({ candidateSha, mainSha }) => {
+      proofs++;
+      assert.equal(candidateSha, sha);
+      assert.equal(mainSha, current);
+    },
+  });
+  assert.equal(proofs, 1);
+  assert.equal(result.sourceSha, sha);
+  assert.equal(result.verifiedMainSha, current);
+  assert.equal(result.buildId, expectedBuildId);
+});
+
+test('release-sync exception rejects absent proof and main changes during runtime', async () => {
+  const current = 'b'.repeat(40);
+  const f = fixture({ mainSha: current });
+  await assert.rejects(verifyStagingActivationReadOnly({
+    ...f.options,
+    allowVerifiedReleaseSyncAdvance: true,
+    verifyReleaseSync: async () => { throw new Error('Unverified release-sync'); },
+  }), /Unverified release-sync/);
+  assert.equal(f.runtimeCalls, 0);
+
+  let mainReads = 0;
+  const other = fixture({ mainSha: current });
+  await assert.rejects(verifyStagingActivationReadOnly({
+    ...other.options,
+    allowVerifiedReleaseSyncAdvance: true,
+    verifyReleaseSync: async () => {},
+    githubGet: async path => {
+      if (path.endsWith('/git/ref/heads/main')) {
+        mainReads++;
+        return { object: { sha: mainReads === 1 ? current : 'c'.repeat(40) } };
+      }
+      return other.options.githubGet(path);
+    },
+  }), /Main advanced during verification/);
+});
