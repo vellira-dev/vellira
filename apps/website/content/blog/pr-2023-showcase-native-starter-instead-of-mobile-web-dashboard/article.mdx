@@ -54,41 +54,73 @@ The result is a narrower integration surface: canonical product source on one si
 
 ## Keep web and native demos separate
 
-The desktop and mobile states intentionally represent different runtimes.
+The desktop and mobile states deliberately represent different runtimes. The desktop tab shows Vellira's real React Web dashboard; the Mobile tab embeds a browser-hosted projection of Expo Native Starter.
 
-The desktop view continues to show Vellira's React Web dashboard. The Mobile view shows the Native Starter projection.
-
-That distinction is more useful than forcing both tabs through one implementation. Cross-platform consistency does not require the web dashboard to impersonate the mobile application, and it does not require the mobile preview to inherit web-only structure.
-
-Instead, the preview communicates a more accurate product contract:
+The implementation follows a compact, auditable path:
 
 ```text
-Desktop -> React Web product surface
-Mobile  -> Expo Native Starter source projected into the browser
+Canonical Expo Native Starter
+  examples/workspace-starter/native/
+  App.tsx, WorkspaceSettings.tsx, WorkspaceNotice.tsx, projectUx.ts
+                         |
+                         v
+     sync-native-starter-preview.mjs
+                         |
+                         v
+   Generated website/native-starter-source/
+                         |
+          browser-only import adapters
+                         |
+                         v
+       /demo/native-starter (iframe)
+                         |
+                         v
+            homepage Mobile preview
+
+Homepage Desktop -> React Web dashboard (separate)
 ```
 
-The website can compare the two without erasing the runtime boundary between them.
+The synchronization script rewrites three imports in the generated `App.tsx` only. It does not rewrite the canonical Expo files. The website therefore consumes the native source mechanically, without maintaining a second mobile dashboard.
 
 ## Synchronize theme state before the preview mounts
 
-[PR #2078](https://github.com/vellira-dev/vellira/pull/2078) exposed a second problem.
+[PR #2078](https://github.com/vellira-dev/vellira/pull/2078) addressed a second integration boundary: the iframe has its own persisted appearance state, so a website theme change alone does not necessarily update its app.
 
-The Native Starter preview runs in an isolated iframe. After the first version landed, changing the website between Light and Dark mode did not necessarily update the embedded preview because the Native Starter maintained its own persisted appearance state.
+In `NativeStarterPreview.tsx`, the parent passes the **resolved** website theme as a URL parameter:
 
-The fix treats theme synchronization as an explicit boundary crossing.
+```tsx
+const frameSource = '/demo/native-starter?websiteTheme=' + theme;
+```
 
-The parent website passes its resolved theme into the preview URL. The isolated browser demo initializes the Native Starter's theme storage before mounting the canonical application.
+In the iframe's `/demo/native-starter` page, the browser bridge reads the parameter and maps it to Native Starter's theme value:
 
-That ordering is important. If the app mounts first and theme state arrives later, the preview can briefly render with stale appearance or preserve a previous iframe state.
+```tsx
+const requested = new URLSearchParams(window.location.search).get(
+  'websiteTheme'
+);
+const nativeTheme =
+  requested === 'dark'
+    ? 'dark'
+    : requested === 'high-contrast'
+      ? 'highContrast'
+      : 'light';
 
-The mapping also preserves the difference between website-level and native theme vocabulary:
+try {
+  window.localStorage.setItem(
+    'vellira-native-showcase:vellira-workspace-native-theme-v1',
+    nativeTheme
+  );
+} catch {
+  // Storage can be unavailable; the app keeps its default.
+}
+setReady(true);
+```
 
-- website `light` -> native Light
-- website `dark` -> native Dark
-- website `high-contrast` -> native `highContrast`
-- website `system` -> the website's resolved Light or Dark value
+The iframe page begins with `ready = false` and renders nothing until that effect prepares storage. Only then does it mount `<StarterApp />`. A changed iframe URL remounts the isolated preview with its newly resolved theme.
 
-The Native Starter source still owns its theme behavior. The website owns the initial bridge that tells the isolated demo which state it should begin with.
+This maps website `light` and `dark` directly, `high-contrast` to native `highContrast`, and website `system` to the parent's already resolved Light or Dark value. Storage failures are caught, so the bridge does not promise persistence in environments that deny it.
+
+The distinction is architectural: the website initializes a theme value for an isolated preview; it does not own the Native Starter's internal theme behavior.
 
 ## Test the synchronization contract, not just the screenshot
 
@@ -104,15 +136,9 @@ The useful tests encode those boundaries so the preview is reviewed as an integr
 
 ## Do not overclaim what the browser proves
 
-There is still a hard limit: a browser preview is not native runtime evidence.
+The browser-hosted projection can demonstrate Native Starter's structure, content, and theme initialization. It cannot establish identical iOS blur, Android rendering, native gestures, safe-area behavior, or device-specific performance.
 
-The website can demonstrate the Native Starter's product structure, content, theme states, and much of its interaction model. It cannot prove that iOS blur, Android rendering, native gestures, safe-area behavior, or platform-specific performance are identical to the real Expo application.
-
-Vellira keeps that limitation explicit.
-
-This is important for any design system that supports both React and React Native. A cross-platform demo should make shared product semantics easier to inspect without collapsing the distinction between runtime implementations.
-
-The browser projection is useful because it is synchronized with native source, not because the browser has become native.
+Source parity proves which Expo files the browser consumes; browser tests check that integration. Neither replaces testing on actual iOS and Android devices.
 
 ## A practical maintenance rule
 
@@ -135,12 +161,7 @@ The marketing site then becomes a constrained projection of that source rather t
 
 ## Why this matters for Vellira
 
-Vellira's broader cross-platform model is based on sharing product semantics while allowing web and native runtimes to stay native.
+Vellira's cross-platform approach shares product semantics while respecting different runtimes. The Native Starter preview applies that principle to product documentation: one authoritative Expo source, a generated browser projection, and an explicit compatibility boundary.
 
-The Native Starter showcase applies the same idea to documentation and product presentation.
+A smaller integration surface means fewer places for product and marketing UI to drift. The useful promise is not "this iframe behaves exactly like a native device"; it is "this preview is derived from the real starter, and its browser-only limitations are visible."
 
-The site does not need to duplicate the mobile application to explain it. It needs a trustworthy way to project the canonical source, isolate the few browser-only substitutions, and make the remaining runtime limits visible.
-
-That is a smaller promise than "the browser preview is the native app."
-
-It is also a much more maintainable one.
