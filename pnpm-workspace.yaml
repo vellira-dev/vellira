@@ -45,8 +45,13 @@ overrides:
   # Candidate for Dependabot #183: limit transition to vulnerable glob 13.0.6.
   # Major 14/path-scurry 3 needs independent CLI, OpenNext and Storybook proofs.
   'glob@13.0.6': 14.0.2
-  # GHSA-c475-qrg2-pj4r: get-uri 6.x still declares basic-ftp ^5; force patched 6.2.1.
-  'get-uri@6.0.5>basic-ftp': 6.2.1
+  # GHSA-c475-qrg2-pj4r and GHSA-5pm8-86m8-9m6r: get-uri 6.x retains
+  # basic-ftp ^5, so keep the narrow override on the patched 6.2.4.
+  'get-uri@6.0.5>basic-ftp': 6.2.4
+  # GHSA-6889-vf6x-f3g5 / GHSA-w4xr-hqv8-ch44 /
+  # GHSA-6cv4-p8m7-4r25 / GHSA-j8rw-jp99-435v:
+  # Expo CLI and Expo code-signing transitively require node-forge.
+  node-forge: 1.4.3
   # GHSA-xqc2-xf4c-x3h3: Expo Router RSC 19.2.8 critical; narrow override.
   '@expo/router-server>react-server-dom-webpack': 19.2.9
 
@@ -121,9 +126,6 @@ patchedDependencies:
   # CVE-2026-93687 / GHSA-vfj7-8cjw-p6xm: upstream braces#72 depth-bound backport.
   # Remove when a published braces release contains the fix.
   'braces@3.0.3': patches/braces@3.0.3.patch
-  # CVE-2026-97058 / GHSA-hp3w-g68c-fv3c: adapted upstream sprintf.js#238 precision-bound backport.
-  # Remove when a published sprintf-js release contains the fix.
-  'sprintf-js@1.0.3': patches/sprintf-js@1.0.3.patch
   # Backport https://github.com/opennextjs/opennextjs-cloudflare/issues/1299.
   # 1.20.12 guards exports only; imports and the public transform still need this.
   # Remove when a stable OpenNext release contains the full shorthand guard.
@@ -137,6 +139,6 @@ patchedDependencies:
   # Wrangler 4.136.3 bundles two legacy bare punycode imports in wrangler-dist/cli.js.
   # Route those exact bundled imports to the declared userland package until upstream removes them.
   'wrangler@4.136.3': patches/wrangler@4.136.3.patch
-  next@16.4.2: patches/next@16.4.2.patch
+  next@16.4.5: patches/next@16.4.5.patch
   deepmerge@4.3.1: patches/deepmerge@4.3.1.patch
 allowUnusedPatches: false
