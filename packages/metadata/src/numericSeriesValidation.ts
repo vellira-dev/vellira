@@ -52,7 +52,15 @@ const fields = (
   );
 };
 
-const label = isCanonicalNumericLabelUnicode151;
+const seriesLabelValid = isCanonicalNumericLabelUnicode151;
+
+// Axis labels retain their pre-existing 1–120 codepoint, visible-text rule.
+// Series identity normalization must not narrow unrelated xLabel semantics.
+const axisLabelValid = (value: unknown): value is string =>
+  typeof value === 'string' &&
+  Array.from(value).length >= 1 &&
+  Array.from(value).length <= 120 &&
+  /\S/u.test(value);
 
 const finite = (value: unknown, limit: number): value is number =>
   typeof value === 'number' &&
@@ -90,7 +98,7 @@ function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
       return invalid('invalid-series-id', `${path}.id`);
     if (ids.has(id)) return invalid('duplicate-series-id', `${path}.id`);
     ids.add(id);
-    if (!label(seriesLabel))
+    if (!seriesLabelValid(seriesLabel))
       return invalid('invalid-series-label', `${path}.label`);
     const normalized = numericLabelKeyUnicode151(seriesLabel);
     if (labels.has(normalized))
@@ -108,7 +116,7 @@ function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
     if (!finite(x, 1e9)) return invalid('invalid-x', `${path}.x`);
     if (x <= previousX) return invalid('non-increasing-x', `${path}.x`);
     previousX = x;
-    if (!label(xLabel)) return invalid('invalid-x-label', `${path}.xLabel`);
+    if (!axisLabelValid(xLabel)) return invalid('invalid-x-label', `${path}.xLabel`);
     if (!record(values)) return invalid('invalid-values', `${path}.values`);
     if (!fields(values, Array.from(ids)))
       return invalid('series-key-mismatch', `${path}.values`);
