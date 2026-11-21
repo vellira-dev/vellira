@@ -1,4 +1,8 @@
 import type { BoundedNumericSeries } from './numericSeries';
+import {
+  isCanonicalNumericLabelUnicode151,
+  numericLabelKeyUnicode151,
+} from './numericUnicodeCasefold151';
 
 export type NumericSeriesValidationCode =
   | 'invalid-dataset'
@@ -48,11 +52,7 @@ const fields = (
   );
 };
 
-const label = (value: unknown): value is string =>
-  typeof value === 'string' &&
-  Array.from(value).length >= 1 &&
-  Array.from(value).length <= 120 &&
-  /\S/u.test(value);
+const label = isCanonicalNumericLabelUnicode151;
 
 const finite = (value: unknown, limit: number): value is number =>
   typeof value === 'number' &&
@@ -61,8 +61,9 @@ const finite = (value: unknown, limit: number): value is number =>
 
 /**
  * Standalone proposed-data validator, NOT Component Program numeric grammar admission.
- * Full Unicode case-fold parity is not yet certified; this implementation rejects
- * obvious NFC / case-insensitive label collisions without claiming that parity.
+ * Unicode 15.1 default full casefold is pinned locally for comparisons.
+ * Full Python/TypeScript conformance and runtime NFC-version parity remain
+ * separately review-required; this does not activate Component Grammar.
  */
 function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
   if (!record(input) || !fields(input, ['series', 'rows']))
@@ -91,7 +92,7 @@ function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
     ids.add(id);
     if (!label(seriesLabel))
       return invalid('invalid-series-label', `${path}.label`);
-    const normalized = seriesLabel.normalize('NFC').toLowerCase();
+    const normalized = numericLabelKeyUnicode151(seriesLabel);
     if (labels.has(normalized))
       return invalid('duplicate-series-label', `${path}.label`);
     labels.add(normalized);
