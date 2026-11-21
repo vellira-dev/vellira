@@ -1,4 +1,8 @@
 import type { BoundedNumericSeries } from './numericSeries';
+import {
+  isCanonicalNumericLabelUnicode151,
+  numericLabelKeyUnicode151,
+} from './numericUnicodeCasefold151';
 
 export type NumericSeriesValidationCode =
   | 'invalid-dataset'
@@ -48,7 +52,11 @@ const fields = (
   );
 };
 
-const label = (value: unknown): value is string =>
+const seriesLabelValid = isCanonicalNumericLabelUnicode151;
+
+// Axis labels retain their pre-existing 1–120 codepoint, visible-text rule.
+// Series identity normalization must not narrow unrelated xLabel semantics.
+const axisLabelValid = (value: unknown): value is string =>
   typeof value === 'string' &&
   Array.from(value).length >= 1 &&
   Array.from(value).length <= 120 &&
@@ -61,8 +69,9 @@ const finite = (value: unknown, limit: number): value is number =>
 
 /**
  * Standalone proposed-data validator, NOT Component Program numeric grammar admission.
- * Full Unicode case-fold parity is not yet certified; this implementation rejects
- * obvious NFC / case-insensitive label collisions without claiming that parity.
+ * Unicode 15.1 default full casefold is pinned locally for comparisons.
+ * Full Python/TypeScript conformance and runtime NFC-version parity remain
+ * separately review-required; this does not activate Component Grammar.
  */
 function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
   if (!record(input) || !fields(input, ['series', 'rows']))
@@ -89,9 +98,9 @@ function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
       return invalid('invalid-series-id', `${path}.id`);
     if (ids.has(id)) return invalid('duplicate-series-id', `${path}.id`);
     ids.add(id);
-    if (!label(seriesLabel))
+    if (!seriesLabelValid(seriesLabel))
       return invalid('invalid-series-label', `${path}.label`);
-    const normalized = seriesLabel.normalize('NFC').toLowerCase();
+    const normalized = numericLabelKeyUnicode151(seriesLabel);
     if (labels.has(normalized))
       return invalid('duplicate-series-label', `${path}.label`);
     labels.add(normalized);
@@ -107,7 +116,8 @@ function validateDatasetShape(input: unknown): NumericSeriesValidationResult {
     if (!finite(x, 1e9)) return invalid('invalid-x', `${path}.x`);
     if (x <= previousX) return invalid('non-increasing-x', `${path}.x`);
     previousX = x;
-    if (!label(xLabel)) return invalid('invalid-x-label', `${path}.xLabel`);
+    if (!axisLabelValid(xLabel))
+      return invalid('invalid-x-label', `${path}.xLabel`);
     if (!record(values)) return invalid('invalid-values', `${path}.values`);
     if (!fields(values, Array.from(ids)))
       return invalid('series-key-mismatch', `${path}.values`);
