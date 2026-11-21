@@ -28,11 +28,29 @@ That copy is not maintained manually. The repository exposes a synchronization s
 node scripts/website/sync-native-starter-preview.mjs
 ```
 
-The same script also supports a check mode so CI can verify that the browser projection still matches the authoritative Expo source.
+The same script also supports a strict, non-mutating check mode. From the repository root, run:
+
+```bash
+node scripts/website/sync-native-starter-preview.mjs --check
+```
+
+For each generated file, the script recomputes its expected contents from the Expo source and compares the bytes. If one file is missing or stale, it throws `Native Starter website preview is stale: <filename>` and exits unsuccessfully. To repair the projection, run the command **without** `--check`, review the generated diff, and run `--check` again.
+
+This check establishes *source parity* for the four selected files after the script's explicit import substitutions. It does not replace a website build, browser interaction tests, or device testing.
 
 This matters because generated source changes the review question. Instead of asking whether two implementations still look similar, maintainers can ask whether the website projection is still mechanically synchronized with the source it represents.
 
 The original Expo app remains unchanged. Website-specific compatibility stays outside the Native Starter rather than leaking browser constraints back into the package developers actually use.
+
+## Why not maintain a separate mobile mock?
+
+There are three plausible ways to put a mobile app on a React marketing site, but they optimize for different things:
+
+- **Hand-written web mock:** simple to style for a screenshot, but every product state and interaction must be updated a second time. Visual resemblance does not establish source parity.
+- **Directly import the Expo app into Next.js:** avoids copying source, but pushes Expo and React Native-specific dependencies into the website's module resolver. In this repository, that created Turbopack dependency-resolution and Flow-parser problems.
+- **Generate a bounded browser projection:** adds a sync command and a few explicit adapters, but keeps Expo source authoritative and makes drift detectable with a byte-for-byte check.
+
+Vellira chose the third option because the goal is a continuously maintained product preview, not a one-off illustration. This is a trade-off, not a universal prescription: a static mock may be sufficient for a noninteractive landing page, while direct sharing can work when the repository's dependency and bundler boundaries are designed for it.
 
 ## Adapt only the browser-specific boundaries
 
@@ -128,11 +146,14 @@ A preview like this has several failure modes that a static screenshot would not
 
 The repository therefore checks the relationships around the showcase: that the Mobile state uses the Native Starter path rather than the React Web dashboard, that generated source remains synchronized, and that the resolved website theme is bridged before the embedded app mounts.
 
-Those checks are valuable because the maintenance risk is structural.
+The failure modes point to different checks:
 
-A developer can make the preview look correct locally while accidentally breaking source parity. A theme can appear correct on first load while failing after Light -> Dark -> Light switching. A refactor can keep the iframe visible while reconnecting it to the wrong product surface.
+- **Stale generated source:** `sync-native-starter-preview.mjs --check` fails even when the preview still looks plausible.
+- **Wrong Mobile implementation:** inspect the Mobile-tab wiring and verify that it mounts the Native Starter iframe rather than shrinking the desktop dashboard.
+- **Stale theme after a switch:** exercise Light → Dark → Light and High Contrast while Mobile is selected; inspect the iframe URL and whether the page initializes its stored theme before rendering.
+- **Incorrect claims about native behavior:** compare the browser result with device tests before describing iOS blur, Android rendering, or gesture parity.
 
-The useful tests encode those boundaries so the preview is reviewed as an integration, not as a decorative mock.
+These are distinct guarantees. A successful source check says nothing about correct theme propagation; a green browser check cannot stand in for real-device verification.
 
 ## Do not overclaim what the browser proves
 
@@ -144,16 +165,15 @@ Source parity proves which Expo files the browser consumes; browser tests check 
 
 When the Native Starter changes, the website preview should be treated as a generated consumer of that change.
 
-A useful review sequence is:
+A maintainer can use this checklist after changing the starter:
 
-```text
-1. Change the canonical Expo Native Starter.
-2. Regenerate the website projection.
-3. Verify source parity.
-4. Review the small browser-adapter boundary.
-5. Test desktop/mobile selection and theme synchronization.
-6. Confirm that the preview still avoids claims that require a real native runtime.
-```
+1. Change the canonical files under `examples/workspace-starter/native/`.
+2. Run `node scripts/website/sync-native-starter-preview.mjs` and inspect the generated diff.
+3. Run `node scripts/website/sync-native-starter-preview.mjs --check` to catch stale files.
+4. Review the three browser-only import substitutions; do not edit generated source by hand.
+5. Confirm Desktop still uses the React Web dashboard, while Mobile loads `/demo/native-starter`.
+6. Test Light → Dark → Light and High Contrast; verify the query parameter and pre-mount theme initialization.
+7. Test native-specific behavior on iOS and Android before making device-runtime claims.
 
 This keeps the expensive part of cross-platform maintenance in one place: the actual product source.
 
