@@ -134,7 +134,7 @@ function validCodeShowcaseSources(source: string): boolean {
 }
 
 function validPublishTargetSource(source: string): boolean {
-  const destinations = [...source.matchAll(/\\s+href: '([^']+)'/g)].map(
+  const destinations = [...source.matchAll(/\s+href: '([^']+)'/g)].map(
     (match) => match[1]
   );
   const link = anchorAttributes(source).find(
@@ -265,10 +265,7 @@ describe('dynamic website navigation evidence (source contracts)', () => {
     ).toBe(false);
     expect(
       validPublishTargetSource(
-        source.replace(
-          'href={target.href}',
-          'href={untrustedDestination}'
-        )
+        source.replace('href={target.href}', 'href={untrustedDestination}')
       )
     ).toBe(false);
     expect(
