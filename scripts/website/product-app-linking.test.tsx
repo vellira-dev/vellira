@@ -228,11 +228,11 @@ it.each([
 ] as const)(
   'OAuth callback error %s exposes only bounded recovery links',
   async (errorCode, hasSecondary) => {
-    window.history.replaceState(
-      null,
-      '',
-      '/auth/callback?error=' + encodeURIComponent(errorCode) + '&provider=github'
-    );
+    const query = new URLSearchParams({
+      error: errorCode,
+      provider: 'github',
+    });
+    window.history.replaceState(null, '', '/auth/callback?' + query);
     render(<OAuthCallback />);
     expect(await screen.findByRole('alert')).toBeVisible();
     const links = screen.getAllByRole('link');
