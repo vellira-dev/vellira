@@ -50,7 +50,7 @@ const contracts: Evidence[] = [
   },
   {
     path: 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx',
-    line: 889,
+    line: 888,
     kind: 'canonical-button',
     testFile:
       'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
@@ -59,7 +59,7 @@ const contracts: Evidence[] = [
   },
   {
     path: 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx',
-    line: 905,
+    line: 904,
     kind: 'canonical-button',
     testFile:
       'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
