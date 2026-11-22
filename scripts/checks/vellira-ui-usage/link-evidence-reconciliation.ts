@@ -53,7 +53,8 @@ const contracts: Evidence[] = [
     line: 265,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'bounds SiteHeader marketing links to declared navigation destinations',
+    testTitle:
+      'bounds SiteHeader marketing links to declared navigation destinations',
     scope: 'source-contract',
   },
   {
@@ -69,7 +70,8 @@ const contracts: Evidence[] = [
     line: 362,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'bounds SiteHeader marketing links to declared navigation destinations',
+    testTitle:
+      'bounds SiteHeader marketing links to declared navigation destinations',
     scope: 'source-contract',
   },
   {
