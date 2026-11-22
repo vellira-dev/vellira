@@ -23,6 +23,7 @@ export function buildReadOnlyDiagnosticReceipt({
   })) {
     assert.ok(Number.isSafeInteger(value) && value > 0, 'Invalid ' + name);
   }
+  assert.equal(diagnosticRunAttempt, 1, 'Automatic read-only recovery may run only once per workflow run');
   assert.ok(typeof eligible === 'boolean');
   outcome(admissionOutcome, 'admission');
   outcome(identityOutcome, 'initial identity');
