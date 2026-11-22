@@ -184,6 +184,37 @@ describe('website structural navigation contracts (source evidence)', () => {
     }
   });
 
+  it('keeps HeaderSearch result links on catalog component routes', () => {
+    const { ast, matches } = openings(
+      'components/layout/SiteHeader/HeaderSearch/HeaderSearch.tsx',
+      'Link'
+    );
+    expect(matches).toHaveLength(1);
+    const [link] = matches;
+    expect(attribute(link, 'href')?.getText(ast)).toBe(
+      'href={`/components/${component.slug}`}'
+    );
+    expect(attribute(link, 'role')?.getText(ast)).toBe("role='option'");
+    expect(attribute(link, 'key')?.getText(ast)).toBe('key={component.slug}');
+    expect(attribute(link, 'onClick')?.getText(ast)).toBe(
+      'onClick={resetSearch}'
+    );
+
+    const source = readFileSync(
+      new URL(
+        '../../../apps/website/src/components/layout/SiteHeader/HeaderSearch/HeaderSearch.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    expect(source).toContain(
+      "import { webComponents } from '@/component-catalog'"
+    );
+    expect(source).toContain('return webComponents');
+    expect(source).toContain('results.map((component, index)');
+    expect(source).toContain('router.push(`/components/${result.slug}`)');
+  });
+
   it('keeps external workspace navigation protected and drawer-aware', () => {
     const { ast, matches } = openings('product-app/AppShell.tsx', 'a');
     const docs = matches.find((link) =>

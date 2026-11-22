@@ -49,6 +49,14 @@ const contracts: Evidence[] = [
     scope: 'source-contract',
   },
   {
+    path: 'apps/website/src/components/layout/SiteHeader/HeaderSearch/HeaderSearch.tsx',
+    line: 285,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle: 'keeps HeaderSearch result links on catalog component routes',
+    scope: 'source-contract',
+  },
+  {
     path: 'apps/website/src/components/layout/SiteHeader/SiteHeader.tsx',
     line: 265,
     kind: 'next-link',
