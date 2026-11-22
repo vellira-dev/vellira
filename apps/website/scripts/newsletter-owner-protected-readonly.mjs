@@ -4,7 +4,7 @@ import { inspectNewsletterOwnerDeploymentReadOnly } from './newsletter-owner-dep
 
 const API = 'https://api.cloudflare.com';
 const ACCOUNT = /^[a-f0-9]{32}$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const OWNER = 'vellira-newsletter-budget-owner';
 
 export function makeNewsletterOwnerReadonlyReader({
