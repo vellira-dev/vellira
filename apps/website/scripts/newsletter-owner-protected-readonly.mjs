@@ -23,13 +23,12 @@ export function makeNewsletterOwnerReadonlyReader({
   return async (path) => {
     if (typeof path !== 'string') throw new Error('Blocked Cloudflare read path');
     const tail = path.startsWith(root + '/') ? path.slice(root.length) : '';
-    if (path !== list &&
-        !/^\\/deployments\\/[0-9a-f-]+$/i.test(tail) &&
-        !/^\\/versions\\/[0-9a-f-]+$/i.test(tail)) {
+    const isDetail = tail.startsWith('/deployments/') &&
+      UUID.test(tail.slice('/deployments/'.length));
+    const isVersion = tail.startsWith('/versions/') &&
+      UUID.test(tail.slice('/versions/'.length));
+    if (path !== list && !isDetail && !isVersion) {
       throw new Error('Blocked Cloudflare read path');
-    }
-    if (path !== list && !UUID.test(tail.split('/')[2] ?? '')) {
-      throw new Error('Invalid Cloudflare version identifier');
     }
     const url = new URL('/client/v4' + path, API);
     if (url.origin !== API || url.username || url.password ||
