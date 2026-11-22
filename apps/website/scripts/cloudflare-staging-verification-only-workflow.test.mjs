@@ -48,5 +48,7 @@ test('single automatic attempt and durable diagnostic receipt keep original stag
   assert.match(workflow, /cloudflare-recovery-diagnostic-receipt\.mjs/);
   assert.match(workflow, /staging-read-only-recovery-/);
   assert.match(workflow, /retention-days: 14/);
+  assert.match(workflow, /if-no-files-found: error/);
+  assert.match(workflow, /steps\.admission\.outputs\.eligible == 'true' && steps\.identity\.outcome == 'success'/);
   assert.doesNotMatch(workflow, /actions: write|contents: write|CLOUDFLARE_API_TOKEN|wrangler deploy|dispatches/);
 });
