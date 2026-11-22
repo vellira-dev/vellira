@@ -214,7 +214,7 @@ try {
           });
           await mobileNavigation.getByRole('link', { name: 'Roadmap' }).click();
           await expect(menuTrigger).toHaveAttribute('aria-expanded', 'false');
-          await expect(page).toHaveURL(/\\\/#roadmap$/);
+          await expect(page).toHaveURL(/#roadmap$/);
           await expect(page.locator('#roadmap')).toBeAttached();
         }
         assert.deepEqual(errors, []);
