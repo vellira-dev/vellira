@@ -1,0 +1,54 @@
+name: Verify Failed Website Staging Activation (Read Only)
+
+on:
+  workflow_run:
+    workflows: ['Deploy Website Cloudflare Staging']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: vellira-failed-staging-readproof
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Inspect failed staging and verify existing Worker without deploy
+    if: >-
+      github.event.workflow_run.conclusion == 'failure' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout trusted main read-only verification logic
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Set up pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22.23.4
+          package-manager-cache: false
+      - name: Prove Wrangler step succeeded before failure
+        id: admission
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FAILED_STAGING_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          FAILED_STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+          FAILED_STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: node apps/website/scripts/cloudflare-staging-verification-only-admission.mjs
+      - name: Reverify existing staging deployment via Cloudflare read-only API
+        if: steps.admission.outputs.eligible == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EXPECTED_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+          STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WORKERS_READ_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_READ_TOKEN }}
+        run: node apps/website/scripts/cloudflare-deployment-readproof.mjs
