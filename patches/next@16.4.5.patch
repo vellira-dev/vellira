@@ -1,3 +1,69 @@
+diff --git a/dist/client/components/app-router.js b/dist/client/components/app-router.js
+--- a/dist/client/components/app-router.js
++++ b/dist/client/components/app-router.js
+@@ -204,10 +204,8 @@
+             if (!event.persisted || !window.history.state?.__PRIVATE_NEXTJS_INTERNALS_TREE) {
+                 return;
+             }
+-            // Clear the pendingMpaPath value so that a subsequent MPA navigation to the same URL can be triggered.
+-            // This is necessary because if the browser restored from bfcache, the pendingMpaPath would still be set to the value
+-            // of the last MPA navigation.
+-            globalMutable.pendingMpaPath = undefined;
++            // Clear the pending hard navigation when this document is restored.
++            globalMutable.pendingMpaNavigation = undefined;
+             (0, _navigator.restore)(new URL(window.location.href), window.history.state.__PRIVATE_NEXTJS_INTERNALS_TREE);
+         }
+         window.addEventListener('pageshow', handlePageShow);
+@@ -253,14 +251,14 @@
+     const { pushRef } = state;
+     if (pushRef.mpaNavigation) {
+         // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
+-        if (globalMutable.pendingMpaPath !== canonicalUrl) {
++        if (globalMutable.pendingMpaNavigation !== pushRef) {
+             const location = window.location;
+             if (pushRef.pendingPush) {
+                 location.assign(canonicalUrl);
+             } else {
+                 location.replace(canonicalUrl);
+             }
+-            globalMutable.pendingMpaPath = canonicalUrl;
++            globalMutable.pendingMpaNavigation = pushRef;
+         }
+         // TODO-APP: Should we listen to navigateerror here to catch failed
+         // navigations somehow? And should we call window.stop() if a SPA navigation
+diff --git a/dist/esm/client/components/app-router.js b/dist/esm/client/components/app-router.js
+--- a/dist/esm/client/components/app-router.js
++++ b/dist/esm/client/components/app-router.js
+@@ -192,10 +192,8 @@
+             if (!event.persisted || !window.history.state?.__PRIVATE_NEXTJS_INTERNALS_TREE) {
+                 return;
+             }
+-            // Clear the pendingMpaPath value so that a subsequent MPA navigation to the same URL can be triggered.
+-            // This is necessary because if the browser restored from bfcache, the pendingMpaPath would still be set to the value
+-            // of the last MPA navigation.
+-            globalMutable.pendingMpaPath = undefined;
++            // Clear the pending hard navigation when this document is restored.
++            globalMutable.pendingMpaNavigation = undefined;
+             restore(new URL(window.location.href), window.history.state.__PRIVATE_NEXTJS_INTERNALS_TREE);
+         }
+         window.addEventListener('pageshow', handlePageShow);
+@@ -241,14 +239,14 @@
+     const { pushRef } = state;
+     if (pushRef.mpaNavigation) {
+         // if there's a re-render, we don't want to trigger another redirect if one is already in flight to the same URL
+-        if (globalMutable.pendingMpaPath !== canonicalUrl) {
++        if (globalMutable.pendingMpaNavigation !== pushRef) {
+             const location = window.location;
+             if (pushRef.pendingPush) {
+                 location.assign(canonicalUrl);
+             } else {
+                 location.replace(canonicalUrl);
+             }
+-            globalMutable.pendingMpaPath = canonicalUrl;
++            globalMutable.pendingMpaNavigation = pushRef;
+         }
+         // TODO-APP: Should we listen to navigateerror here to catch failed
+         // navigations somehow? And should we call window.stop() if a SPA navigation
 diff --git a/dist/client/components/router-reducer/fetch-server-response.js b/dist/client/components/router-reducer/fetch-server-response.js
 index b446c3b019af3eeca1858e68338def3be7689ecd..beab4d8051b11f037becac45e1989927b14e24b6 100644
 --- a/dist/client/components/router-reducer/fetch-server-response.js
