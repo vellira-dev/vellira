@@ -17,35 +17,23 @@ export function makeNewsletterOwnerReadonlyReader({
       typeof fetcher !== 'function') {
     throw new Error('Read-only account credentials and fetcher required');
   }
-  const root = '/client/v4/accounts/' + accountId +
-    '/workers/scripts/' + OWNER;
+  const root = '/accounts/' + accountId + '/workers/scripts/' + OWNER;
   const list = root + '/deployments?page=1&per_page=2';
-  const detail = new RegExp(
-    '^' + root.replaceAll('/', '\\/') +
-    '\\/deployments\\/(' + UUID.source.slice(1, -1) + ')$'
-  );
-  const version = new RegExp(
-    '^' + root.replaceAll('/', '\\/') +
-    '\\/versions\\/(' + UUID.source.slice(1, -1) + ')$'
-  );
 
   return async (path) => {
-    if (typeof path !== 'string' ||
-        !(root + '/deployments?page=1&per_page=2' === path ||
-          detail.test('/client/v4' + path) ||
-          version.test('/client/v4' + path))) {
-      // The inspector passes account-scoped paths without the API prefix.
-      // No arbitrary endpoint, query, worker name, or external host allowed.
-      if (path !== list.slice('/client/v4'.length)) {
-        throw new Error('Blocked Cloudflare read path');
-      }
-    }
-    const full = path.startsWith('/client/v4/') ? path : '/client/v4' + path;
-    if (full !== list && !detail.test(full) && !version.test(full)) {
+    if (typeof path !== 'string') throw new Error('Blocked Cloudflare read path');
+    const tail = path.startsWith(root + '/') ? path.slice(root.length) : '';
+    if (path !== list &&
+        !/^\\/deployments\\/[0-9a-f-]+$/i.test(tail) &&
+        !/^\\/versions\\/[0-9a-f-]+$/i.test(tail)) {
       throw new Error('Blocked Cloudflare read path');
     }
-    const url = new URL(full, API);
-    if (url.origin !== API || url.username || url.password) {
+    if (path !== list && !UUID.test(tail.split('/')[2] ?? '')) {
+      throw new Error('Invalid Cloudflare version identifier');
+    }
+    const url = new URL('/client/v4' + path, API);
+    if (url.origin !== API || url.username || url.password ||
+        url.pathname !== '/client/v4' + path.split('?')[0]) {
       throw new Error('Blocked Cloudflare destination');
     }
     const response = await fetcher(url, {
