@@ -207,7 +207,9 @@ describe('website structural navigation contracts (source evidence)', () => {
       ),
       'utf8'
     );
-    expect(source).toContain("import { webComponents } from '@/component-catalog'");
+    expect(source).toContain(
+      "import { webComponents } from '@/component-catalog'"
+    );
     expect(source).toContain('return webComponents');
     expect(source).toContain('results.map((component, index)');
     expect(source).toContain('router.push(`/components/${result.slug}`)');
