@@ -216,6 +216,35 @@ it.each([
     expect(document.body.textContent).not.toContain('evil.invalid');
   }
 );
+it.each([
+  ['rate_limited', false],
+  ['link_authentication_required', false],
+  ['account_link_required', true],
+  ['oauth_cancelled', false],
+  ['oauth_identity_ineligible', false],
+  ['account_disabled', false],
+  ['oauth_invalid', false],
+  ['untrusted_redirect_https://evil.invalid', false],
+] as const)(
+  'OAuth callback error %s exposes only bounded recovery links',
+  async (errorCode, hasSecondary) => {
+    const query = new URLSearchParams({
+      error: errorCode,
+      provider: 'github',
+    });
+    window.history.replaceState(null, '', '/auth/callback?' + query);
+    render(<OAuthCallback />);
+    expect(await screen.findByRole('alert')).toBeVisible();
+    const links = screen.getAllByRole('link');
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(
+      hasSecondary ? ['/login', '/forgot-password'] : ['/login']
+    );
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(location.search + location.hash).toBe('');
+    expect(document.body.textContent).not.toContain('evil.invalid');
+  }
+);
 it('reuses normal password login, then separately requires an explicit CSRF-protected connection', async () => {
   render(
     <StrictMode>
