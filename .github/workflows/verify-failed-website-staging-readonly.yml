@@ -52,3 +52,27 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_WORKERS_READ_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_READ_TOKEN }}
         run: node apps/website/scripts/cloudflare-deployment-readproof.mjs
+      - name: Retry only the previously failed route smoke (read-only diagnostics)
+        id: smoke
+        if: steps.admission.outputs.eligible == 'true'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FAILED_STAGING_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          FAILED_STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+          FAILED_STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        run: node apps/website/scripts/cloudflare-route-smoke-readonly-retry.mjs
+      - name: Reconfirm Cloudflare deployment identity after route diagnostics
+        if: steps.admission.outputs.eligible == 'true' && steps.smoke.outcome == 'success'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          EXPECTED_SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+          STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WORKERS_READ_TOKEN: ${{ secrets.CLOUDFLARE_WORKERS_READ_TOKEN }}
+        run: node apps/website/scripts/cloudflare-deployment-readproof.mjs
+      - name: Record read-only smoke diagnostic failure
+        if: steps.admission.outputs.eligible == 'true' && steps.smoke.outcome == 'failure'
+        run: |
+          echo "::notice::Read-only smoke diagnostic could not prove route recovery. Original staging failure remains authoritative; production promotion is prohibited."
