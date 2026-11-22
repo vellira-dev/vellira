@@ -49,6 +49,22 @@ const contracts: Evidence[] = [
     scope: 'source-contract',
   },
   {
+    path: 'apps/website/src/product-app/AuthFlows.tsx',
+    line: 1060,
+    kind: 'canonical-button',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle: 'bounds OAuth callback failure navigation to recovery routes',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/product-app/AuthFlows.tsx',
+    line: 1064,
+    kind: 'canonical-button',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle: 'bounds OAuth callback failure navigation to recovery routes',
+    scope: 'source-contract',
+  },
+  {
     path: 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx',
     line: 888,
     kind: 'canonical-button',
