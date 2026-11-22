@@ -82,10 +82,7 @@ describe('website structural navigation contracts (source evidence)', () => {
     );
     expect(
       recoveryLinks.map((link) => attribute(link, 'href')?.getText(ast))
-    ).toEqual([
-      'href={failure.primary.href}',
-      'href={failure.secondary.href}',
-    ]);
+    ).toEqual(['href={failure.primary.href}', 'href={failure.secondary.href}']);
 
     const failureFactory = ast.statements.find(
       (node) =>
@@ -95,10 +92,7 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(failureFactory).toBeDefined();
     const destinations: string[] = [];
     function visit(node: ts.Node): void {
-      if (
-        ts.isPropertyAssignment(node) &&
-        node.name.getText(ast) === 'href'
-      ) {
+      if (ts.isPropertyAssignment(node) && node.name.getText(ast) === 'href') {
         expect(ts.isStringLiteral(node.initializer)).toBe(true);
         if (ts.isStringLiteral(node.initializer)) {
           destinations.push(node.initializer.text);
@@ -113,17 +107,21 @@ describe('website structural navigation contracts (source evidence)', () => {
       '/login',
     ]);
     const source = readFileSync(
-      new URL('../../../apps/website/src/product-app/AuthFlows.tsx', import.meta.url),
+      new URL(
+        '../../../apps/website/src/product-app/AuthFlows.tsx',
+        import.meta.url
+      ),
       'utf8'
     );
     expect(source.match(/href: connectionHref\(connection\)/g)).toHaveLength(2);
     const connectionSource = readFileSync(
-      new URL('../../../apps/website/src/product-app/oauthConnection.ts', import.meta.url),
+      new URL(
+        '../../../apps/website/src/product-app/oauthConnection.ts',
+        import.meta.url
+      ),
       'utf8'
     );
-    expect(connectionSource).toContain(
-      "if (!isOAuthConnection(connection))"
-    );
+    expect(connectionSource).toContain('if (!isOAuthConnection(connection))');
     expect(connectionSource).toContain(
       "return '/auth/connect?' + connectionQuery(connection);"
     );
