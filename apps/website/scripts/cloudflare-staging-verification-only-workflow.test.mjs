@@ -29,3 +29,13 @@ test('Cloudflare secrets and verifier run only after exact Wrangler admission', 
   assert.match(workflow, /workflow_run\.head_sha/);
   assert.match(workflow, /workflow_run\.run_attempt/);
 });
+
+test('read-only route diagnostics run only after deployment attestation and never promote', () => {
+  const proof = workflow.indexOf('Reverify existing staging deployment via Cloudflare read-only API');
+  const smoke = workflow.indexOf('Retry only the previously failed route smoke');
+  const reproof = workflow.indexOf('Reconfirm Cloudflare deployment identity after route diagnostics');
+  assert.ok(proof > 0 && smoke > proof && reproof > smoke);
+  assert.match(workflow, /steps\.smoke\.outcome == 'success'/);
+  assert.match(workflow, /cloudflare-route-smoke-readonly-retry\.mjs/);
+  assert.doesNotMatch(workflow, /actions: write|contents: write|wrangler deploy|CLOUDFLARE_API_TOKEN|dispatches/);
+});
