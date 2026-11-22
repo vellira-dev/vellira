@@ -106,7 +106,12 @@ function validDemoSource(source: string): boolean {
 
 function validCodeShowcaseSources(source: string): boolean {
   const compactSource = compact(source);
-  const expectedExamples = ['button', 'input', 'modal', 'dropdown'];
+  const expectedStorybook = {
+    button: 'primitives-button',
+    input: 'primitives-input',
+    modal: 'components-modal',
+    dropdown: 'components-dropdown',
+  } as const;
   const docs = anchorAttributes(source).find(
     (item) => item.href === '{getDocsLink(platform, activeExample)}'
   );
@@ -130,12 +135,11 @@ function validCodeShowcaseSources(source: string): boolean {
     compactSource.includes(
       compact('return `https://docs.vellira.dev/${docsPlatform}/${example}`;')
     ) &&
-    expectedExamples.every((example) =>
-      source.includes(
-        `${example}: 'https://storybook.vellira.dev/?path=/docs/`
-      ) ||
-      source.includes(
-        `${example}:\n    'https://storybook.vellira.dev/?path=/docs/`
+    Object.entries(expectedStorybook).every(([example, slug]) =>
+      compactSource.includes(
+        compact(
+          `${example}: 'https://storybook.vellira.dev/?path=/docs/${slug}--docs'`
+        )
       )
     ) &&
     safeExternal(docs) &&
