@@ -202,11 +202,13 @@ try {
           assert.ok(bounds);
           await backdrop.click({ position: { x: 5, y: bounds.height - 5 } });
           await expect(menuTrigger).toHaveAttribute('aria-expanded', 'false');
+          await expect(menuTrigger).toBeFocused();
 
           await menuTrigger.click();
           await expect(menuTrigger).toHaveAttribute('aria-expanded', 'true');
           await page.keyboard.press('Escape');
           await expect(menuTrigger).toHaveAttribute('aria-expanded', 'false');
+          await expect(menuTrigger).toBeFocused();
 
           await menuTrigger.click();
           const mobileNavigation = page.getByRole('navigation', {
@@ -214,6 +216,7 @@ try {
           });
           await mobileNavigation.getByRole('link', { name: 'Roadmap' }).click();
           await expect(menuTrigger).toHaveAttribute('aria-expanded', 'false');
+          await expect(menuTrigger).toBeFocused();
           await expect(page).toHaveURL(/#roadmap$/);
           await expect(page.locator('#roadmap')).toBeAttached();
         }
