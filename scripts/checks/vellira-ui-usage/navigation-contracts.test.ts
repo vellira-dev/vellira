@@ -75,6 +75,60 @@ describe('website structural navigation contracts (source evidence)', () => {
     );
   });
 
+  it('bounds OAuth callback failure navigation to recovery routes', () => {
+    const { ast, matches } = openings('product-app/AuthFlows.tsx', 'Link');
+    const recoveryLinks = matches.filter((link) =>
+      attribute(link, 'href')?.getText(ast).includes('failure.')
+    );
+    expect(
+      recoveryLinks.map((link) => attribute(link, 'href')?.getText(ast))
+    ).toEqual([
+      'href={failure.primary.href}',
+      'href={failure.secondary.href}',
+    ]);
+
+    const failureFactory = ast.statements.find(
+      (node) =>
+        ts.isFunctionDeclaration(node) &&
+        node.name?.text === 'getOAuthCallbackFailure'
+    );
+    expect(failureFactory).toBeDefined();
+    const destinations: string[] = [];
+    function visit(node: ts.Node): void {
+      if (
+        ts.isPropertyAssignment(node) &&
+        node.name.getText(ast) === 'href'
+      ) {
+        expect(ts.isStringLiteral(node.initializer)).toBe(true);
+        if (ts.isStringLiteral(node.initializer)) {
+          destinations.push(node.initializer.text);
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(failureFactory!);
+    expect(destinations).toHaveLength(9);
+    expect([...new Set(destinations)].sort()).toEqual([
+      '/forgot-password',
+      '/login',
+    ]);
+    const source = readFileSync(
+      new URL('../../../apps/website/src/product-app/AuthFlows.tsx', import.meta.url),
+      'utf8'
+    );
+    expect(source.match(/href: connectionHref\(connection\)/g)).toHaveLength(2);
+    const connectionSource = readFileSync(
+      new URL('../../../apps/website/src/product-app/oauthConnection.ts', import.meta.url),
+      'utf8'
+    );
+    expect(connectionSource).toContain(
+      "if (!isOAuthConnection(connection))"
+    );
+    expect(connectionSource).toContain(
+      "return '/auth/connect?' + connectionQuery(connection);"
+    );
+  });
+
   it('keeps external workspace navigation protected and drawer-aware', () => {
     const { ast, matches } = openings('product-app/AppShell.tsx', 'a');
     const docs = matches.find((link) =>
