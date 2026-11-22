@@ -104,6 +104,45 @@ function validDemoSource(source: string): boolean {
   );
 }
 
+function validCodeShowcaseSources(source: string): boolean {
+  const compactSource = compact(source);
+  const expectedExamples = ['button', 'input', 'modal', 'dropdown'];
+  const docs = anchorAttributes(source).find(
+    (item) => item.href === '{getDocsLink(platform, activeExample)}'
+  );
+  const storybook = anchorAttributes(source).find(
+    (item) => item.href === '{storybookLinks[activeExample]}'
+  );
+  const safeExternal = (anchor: (typeof docs) | undefined) =>
+    anchor?.target === "'_blank'" &&
+    anchor.rel === "'noreferrer noopener'";
+
+  return (
+    compactSource.includes(
+      compact("type Platform = 'react' | 'native';")
+    ) &&
+    compactSource.includes(
+      compact("type ExampleName = 'button' | 'input' | 'modal' | 'dropdown';")
+    ) &&
+    compactSource.includes(
+      compact("const docsPlatform = platform === 'react' ? 'react' : 'react-native';")
+    ) &&
+    compactSource.includes(
+      compact('return `https://docs.vellira.dev/${docsPlatform}/${example}`;')
+    ) &&
+    expectedExamples.every((example) =>
+      source.includes(
+        `${example}: 'https://storybook.vellira.dev/?path=/docs/`
+      ) ||
+      source.includes(
+        `${example}:\n    'https://storybook.vellira.dev/?path=/docs/`
+      )
+    ) &&
+    safeExternal(docs) &&
+    safeExternal(storybook)
+  );
+}
+
 function validCanonicalLinkSource(source: string): boolean {
   return (
     source.includes('if (!href) return <>{children}</>;') &&
@@ -161,6 +200,40 @@ describe('dynamic website navigation evidence (source contracts)', () => {
         source.replace(
           "preview === 'mobile' ? nativeSourceUrl : sourceUrl",
           "preview === 'mobile' ? sourceUrl : nativeSourceUrl"
+        )
+      )
+    ).toBe(false);
+  });
+
+  it('keeps CodeShowcase docs and Storybook destinations bounded', () => {
+    const source = sourceOf('sections/home/CodeShowcase/CodeShowcase.tsx');
+    expect(validCodeShowcaseSources(source)).toBe(true);
+    expect(
+      validCodeShowcaseSources(
+        source.replace('https://docs.vellira.dev/', 'https://evil.invalid/')
+      )
+    ).toBe(false);
+    expect(
+      validCodeShowcaseSources(
+        source.replace(
+          'https://storybook.vellira.dev/?path=/docs/',
+          'https://evil.invalid/?path=/docs/'
+        )
+      )
+    ).toBe(false);
+    expect(
+      validCodeShowcaseSources(
+        source.replace(
+          'href={storybookLinks[activeExample]}',
+          'href={untrustedDestination}'
+        )
+      )
+    ).toBe(false);
+    expect(
+      validCodeShowcaseSources(
+        source.replace(
+          "rel='noreferrer noopener'\n              >\n                Docs",
+          "rel='unsafe'\n              >\n                Docs"
         )
       )
     ).toBe(false);
