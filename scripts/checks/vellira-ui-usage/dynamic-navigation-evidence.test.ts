@@ -123,14 +123,14 @@ function validCodeShowcaseSources(source: string): boolean {
     anchor.rel === "'noreferrer noopener'";
 
   return (
-    compactSource.includes(
-      compact("type Platform = 'react' | 'native';")
-    ) &&
+    compactSource.includes(compact("type Platform = 'react' | 'native';")) &&
     compactSource.includes(
       compact("type ExampleName = 'button' | 'input' | 'modal' | 'dropdown';")
     ) &&
     compactSource.includes(
-      compact("const docsPlatform = platform === 'react' ? 'react' : 'react-native';")
+      compact(
+        "const docsPlatform = platform === 'react' ? 'react' : 'react-native';"
+      )
     ) &&
     compactSource.includes(
       compact('return `https://docs.vellira.dev/${docsPlatform}/${example}`;')
