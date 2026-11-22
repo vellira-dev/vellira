@@ -3,8 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
-// Intentionally import the actual independently built JavaScript entries.
-// Run only after the canonical build and build:subpaths:probe.
+// Load the real canonical compiled root + leaf JS after pnpm build.
+// The old shared-proof path remains an explicit historical diagnostic only.
 let root;
 let button;
 let theme;
@@ -16,7 +16,7 @@ function Probe({ useTheme, label }) {
 
 const optIn = process.env.VELLIRA_SUBPATH_RUNTIME_PROOF === '1';
 (optIn ? describe : describe.skip)(
-  'unpublished native subpath React context identity (#1906)',
+  'canonical native shared-graph React context identity (#2082)',
   () => {
     beforeAll(async () => {
       const entryDir = process.env.VELLIRA_SHARED_CHUNK_PROOF === '1'

@@ -1,6 +1,6 @@
 {
   "name": "@vellira-ui/react",
-  "version": "2.192.7",
+  "version": "2.196.0",
   "description": "Web components for Vellira Design System",
   "keywords": [
     "vellira",
@@ -99,7 +99,7 @@
     "lottie-web": "^5.13.0",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "vite": "^8.3.7",
+    "vite": "^8.3.8",
     "vite-plugin-dts": "^5.1.1",
     "vite-plugin-lib-inject-css": "^2.2.2",
     "vite-plugin-svgr": "^5.2.0",

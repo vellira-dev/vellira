@@ -83,6 +83,29 @@ try {
         }
         await expect(headerSearch).toHaveValue('');
         await expect(headerSearch).toBeFocused();
+        await headerSearch.fill('vellira-no-match-xyz');
+        await expect(page.getByRole('listbox')).toBeVisible();
+        await expect(
+          page.getByText('No components found', { exact: true })
+        ).toBeVisible();
+        await expect(
+          page.getByRole('option', { name: /button/i })
+        ).toHaveCount(0);
+        await headerSearch.press('Escape');
+        await expect(page.getByRole('listbox')).toHaveCount(0);
+        await expect(headerSearch).toHaveAttribute('aria-expanded', 'false');
+        await expect(headerSearch).not.toBeFocused();
+        await headerSearch.focus();
+        await headerSearch.fill('button');
+        await headerSearch.press('ArrowUp');
+        const options = page.getByRole('option');
+        const lastOption = options.last();
+        await expect(lastOption).toHaveAttribute('aria-selected', 'true');
+        await expect(headerSearch).toHaveAttribute(
+          'aria-activedescendant',
+          await lastOption.getAttribute('id')
+        );
+        await headerSearch.fill('butto');
         await headerSearch.fill('button');
         await headerSearch.press('ArrowDown');
         const selectedId = await headerSearch.getAttribute(

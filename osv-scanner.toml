@@ -1,14 +1,5 @@
-[[IgnoredVulns]]
-id = "GHSA-jmr9-qjv8-65gv"
-ignoreUntil = 2027-02-28
-reason = "Tracked by GitHub issue #613. Temporary risk acceptance, not a vulnerability fix. extract-zip@2.0.1 is present only through root dev tooling @lhci/cli@0.15.1 -> lighthouse@12.6.1 -> puppeteer-core@24.43.1 -> @puppeteer/browsers@2.13.2 -> extract-zip@2.0.1. Vellira does not call extract-zip directly, does not ship it in @vellira-ui runtime packages, and does not process attacker-controlled ZIP archives through the LHCI/Puppeteer browser installer path. Upstream status: GitHub Advisory Database currently lists affected versions <=2.0.1 and no patched version; npm latest is 2.0.1 and @lhci/cli@0.15.1 is current/latest while pinning Lighthouse 12.6.1. Scorecard may not honor osv-scanner.toml; re-evaluate alert #32 after merge. Remove this exception immediately when a compatible upstream fix removes the vulnerable dependency path, or if Vellira adds untrusted ZIP processing."
-
-[[IgnoredVulns]]
-id = "GHSA-5p2g-fcmc-qvqq"
-ignoreUntil = 2027-02-28
-reason = "Tracked by GitHub issue #613. Temporary risk acceptance, not a vulnerability fix. image-size@1.2.1 is present only through native build tooling Metro: apps/native-playground and apps/native-storybook -> expo@57.0.12 / react-native@0.86.0 -> @expo/metro@56.0.0 or @react-native/community-cli-plugin@0.86.0 -> metro@0.84.4 -> image-size@1.2.1. Vellira does not import image-size directly, does not ship Metro in @vellira-ui runtime packages, and does not process attacker-controlled JXL or HEIF images through Metro's asset parser paths. Upstream status: GitHub Advisory Database currently lists affected versions <=2.0.2 and no patched version; image-size >=2.0.3 had been referenced previously but was never published, npm latest is 2.0.2, and current Metro still depends on image-size ^1.0.2. Scorecard may not honor osv-scanner.toml; re-evaluate alert #32 after merge. Remove this exception immediately when a compatible upstream fix removes the vulnerable dependency path, or if Vellira adds untrusted JXL/HEIF image processing."
-
-[[IgnoredVulns]]
-id = "GHSA-w3rx-r6r6-pgpr"
-ignoreUntil = 2027-02-28
-reason = "Tracked by GitHub issue #613. Temporary risk acceptance, not a vulnerability fix. image-size@1.2.1 is present only through native build tooling Metro: apps/native-playground and apps/native-storybook -> expo@57.0.12 / react-native@0.86.0 -> @expo/metro@56.0.0 or @react-native/community-cli-plugin@0.86.0 -> metro@0.84.4 -> image-size@1.2.1. Vellira does not import image-size directly, does not ship Metro in @vellira-ui runtime packages, and does not process attacker-controlled ICNS images through Metro's asset parser paths. Upstream status: GitHub Advisory Database currently lists affected versions <=2.0.2 and no patched version; image-size >=2.0.3 had been referenced previously but was never published, npm latest is 2.0.2, and current Metro still depends on image-size ^1.0.2. Scorecard may not honor osv-scanner.toml; re-evaluate alert #32 after merge. Remove this exception immediately when a compatible upstream fix removes the vulnerable dependency path, or if Vellira adds untrusted ICNS image processing."
+# Scorecard #32: previous extract-zip and image-size exceptions were retired
+# after verifying their absence from the root pnpm and both independent npm
+# Starter lockfiles on main 7c5be2d57fb4031e337a1540aa6d165b15e18c5b.
+# No IgnoredVulns entries are currently required for those GHSA advisories.
+# Do not reintroduce exemptions without an independently reviewed risk record.
