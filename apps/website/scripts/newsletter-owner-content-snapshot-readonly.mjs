@@ -46,12 +46,31 @@ export async function inspectNewsletterOwnerContentSnapshotReadOnly({
         (!/^(0|[1-9][0-9]*)$/.test(length) || Number(length) > MAX_CONTENT_BYTES)) {
       return unverified('content_size_unverified');
     }
-    // Never log or persist the downloaded script; reject empty/oversized bodies.
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length < 1 || bytes.length > MAX_CONTENT_BYTES) {
-      return unverified('content_size_unverified');
+    // Bound the stream even if the response omits or lies about Content-Length.
+    // Hash chunks without retaining or logging source bytes.
+    if (!response.body || typeof response.body.getReader !== 'function') {
+      return unverified('content_body_unavailable');
     }
-    const contentSha256 = createHash('sha256').update(bytes).digest('hex');
+    const reader = response.body.getReader();
+    const digest = createHash('sha256');
+    let contentBytes = 0;
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (!(value instanceof Uint8Array)) return unverified('content_body_unavailable');
+        contentBytes += value.byteLength;
+        if (contentBytes > MAX_CONTENT_BYTES) {
+          await reader.cancel();
+          return unverified('content_size_unverified');
+        }
+        digest.update(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    if (contentBytes < 1) return unverified('content_size_unverified');
+    const contentSha256 = digest.digest('hex');
     const after = await metadata();
     if (after.status !== 'stable_single_version_observed') {
       return unverified('deployment_postcheck_unverified');
@@ -60,7 +79,7 @@ export async function inspectNewsletterOwnerContentSnapshotReadOnly({
       status: 'script_scoped_content_snapshot_observed',
       contentSnapshotObserved: true,
       contentSha256,
-      contentBytes: bytes.length,
+      contentBytes,
       versionBoundContent: false,
       sourceBytesVerified: false,
       remotelyAttested: false,
