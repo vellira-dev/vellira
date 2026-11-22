@@ -283,12 +283,17 @@ describe('website structural navigation contracts (source evidence)', () => {
     }
 
     const source = readFileSync(
-      new URL('../../../apps/website/src/product-app/AppHeader.tsx', import.meta.url),
+      new URL(
+        '../../../apps/website/src/product-app/AppHeader.tsx',
+        import.meta.url
+      ),
       'utf8'
     );
     expect(source).toContain("router.push('/app/settings')");
     expect(source).toContain("router.push('/app/settings/billing')");
-    expect(source.match(/workspace\\?\\.membership.role === 'owner'/g)).toHaveLength(2);
+    expect(
+      source.match(/workspace\?\.membership\.role === 'owner'/g)
+    ).toHaveLength(2);
     expect(source).toContain("{status === 'ready' && (");
   });
 
