@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useState, useEffect, useRef, type CSSProperties } from 'react';
+import {
+  useCallback,
+  useState,
+  useEffect,
+  useRef,
+  type CSSProperties,
+} from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -149,7 +155,11 @@ export function SiteHeader({
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
     };
-  }, [resolvedMobileMenuOpen, setResolvedMobileMenuOpen, closeMobileNavigation]);
+  }, [
+    resolvedMobileMenuOpen,
+    setResolvedMobileMenuOpen,
+    closeMobileNavigation,
+  ]);
 
   useEffect(() => {
     if (pathname !== '/') {
