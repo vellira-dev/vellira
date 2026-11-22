@@ -9,7 +9,7 @@ const token = 'private-token';
 const deploymentId = '11111111-1111-4111-8111-111111111111';
 const versionId = '22222222-2222-4222-8222-222222222222';
 
-function fixtures({ bytes = 'worker bundle', status = 200, metadataFault = false } = {}) {
+function fixtures({ bytes = 'worker bundle', status = 200, metadataFault = false, versionChange = false } = {}) {
   const calls = [];
   let listCount = 0;
   const metadataFetcher = async (url, options) => {
@@ -19,13 +19,14 @@ function fixtures({ bytes = 'worker bundle', status = 200, metadataFault = false
     const path = url.pathname + url.search;
     const list = path.endsWith('/deployments?page=1&per_page=2');
     if (list) listCount++;
+    const servingVersion = versionChange && listCount > 2 ? '33333333-3333-4333-8333-333333333333' : versionId;
     const result = list ? { deployments: [{
       id: deploymentId, strategy: 'percentage',
-      versions: [{ version_id: versionId, percentage: 100 }],
+      versions: [{ version_id: servingVersion, percentage: 100 }],
     }] } : path.endsWith('/deployments/' + deploymentId)
       ? { id: deploymentId, strategy: 'percentage',
-        versions: [{ version_id: versionId, percentage: 100 }] }
-      : { id: versionId, resources: { script: { etag: 'private-etag' } } };
+        versions: [{ version_id: servingVersion, percentage: 100 }] }
+      : { id: servingVersion, resources: { script: { etag: 'private-etag' } } };
     if (metadataFault && listCount > 2) return Response.json({ success: false }, { status: 403 });
     return Response.json({ success: true, result });
   };
@@ -94,5 +95,15 @@ test('post-read metadata failure fails closed', async () => {
   const f = fixtures({ metadataFault: true });
   const result = await inspect({ accountId, token, ...f });
   assert.equal(result.status, 'unverified');
+  assert.equal(result.cutoverAuthorized, false);
+});
+
+
+test('change of serving version between two individually stable inspections fails closed', async () => {
+  const f = fixtures({ versionChange: true });
+  const result = await inspect({ accountId, token, ...f });
+  assert.equal(result.status, 'unverified');
+  assert.equal(result.reason, 'deployment_changed_during_snapshot');
+  assert.equal(result.sourceBytesVerified, false);
   assert.equal(result.cutoverAuthorized, false);
 });
