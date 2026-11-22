@@ -56,7 +56,7 @@ jobs:
         run: node apps/website/scripts/cloudflare-deployment-readproof.mjs
       - name: Retry only the previously failed route smoke (read-only diagnostics)
         id: smoke
-        if: steps.admission.outputs.eligible == 'true'
+        if: steps.admission.outputs.eligible == 'true' && steps.identity.outcome == 'success'
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -97,5 +97,5 @@ jobs:
         with:
           name: staging-read-only-recovery-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}-${{ github.run_id }}
           path: apps/website/recovery-evidence/read-only-diagnostic.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
