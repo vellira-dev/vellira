@@ -64,9 +64,7 @@ describe('website structural navigation contracts (source evidence)', () => {
     const href = attribute(link, 'href')?.getText(ast);
     expect(href).toContain('/components/${component.slug}');
     expect(href).toContain("workspaceContextRequested ? '?from=app' : ''");
-    expect(attribute(link, 'key')?.getText(ast)).toBe(
-      'key={component.slug}'
-    );
+    expect(attribute(link, 'key')?.getText(ast)).toBe('key={component.slug}');
     const source = readFileSync(
       new URL(
         '../../../apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.tsx',
@@ -88,9 +86,7 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(attribute(link, 'href')?.getText(ast)).toBe(
       'href={`/components/${component.slug}`}'
     );
-    expect(attribute(link, 'key')?.getText(ast)).toBe(
-      'key={component.slug}'
-    );
+    expect(attribute(link, 'key')?.getText(ast)).toBe('key={component.slug}');
   });
 
   it('shows workspace return only in workspace catalog context', () => {
