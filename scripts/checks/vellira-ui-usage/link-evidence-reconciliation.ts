@@ -49,6 +49,24 @@ const contracts: Evidence[] = [
     scope: 'source-contract',
   },
   {
+    path: 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx',
+    line: 888,
+    kind: 'canonical-button',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle: 'keeps CodeShowcase docs and Storybook destinations bounded',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/sections/home/CodeShowcase/CodeShowcase.tsx',
+    line: 904,
+    kind: 'canonical-button',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle: 'keeps CodeShowcase docs and Storybook destinations bounded',
+    scope: 'source-contract',
+  },
+  {
     path: 'apps/website/src/components/navigation/DesignSystemLink.tsx',
     line: 56,
     kind: 'canonical-button',

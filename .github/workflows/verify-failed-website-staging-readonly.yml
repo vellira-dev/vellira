@@ -20,7 +20,8 @@ jobs:
     if: >-
       github.event.workflow_run.conclusion == 'failure' &&
       github.event.workflow_run.event == 'push' &&
-      github.event.workflow_run.head_branch == 'main'
+      github.event.workflow_run.head_branch == 'main' &&
+      github.run_attempt == 1
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -43,6 +44,7 @@ jobs:
           FAILED_STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: node apps/website/scripts/cloudflare-staging-verification-only-admission.mjs
       - name: Reverify existing staging deployment via Cloudflare read-only API
+        id: identity
         if: steps.admission.outputs.eligible == 'true'
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -54,7 +56,7 @@ jobs:
         run: node apps/website/scripts/cloudflare-deployment-readproof.mjs
       - name: Retry only the previously failed route smoke (read-only diagnostics)
         id: smoke
-        if: steps.admission.outputs.eligible == 'true'
+        if: steps.admission.outputs.eligible == 'true' && steps.identity.outcome == 'success'
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -63,6 +65,7 @@ jobs:
           FAILED_STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
         run: node apps/website/scripts/cloudflare-route-smoke-readonly-retry.mjs
       - name: Reconfirm Cloudflare deployment identity after route diagnostics
+        id: final-identity
         if: steps.admission.outputs.eligible == 'true' && steps.smoke.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -76,3 +79,23 @@ jobs:
         if: steps.admission.outputs.eligible == 'true' && steps.smoke.outcome == 'failure'
         run: |
           echo "::notice::Read-only smoke diagnostic could not prove route recovery. Original staging failure remains authoritative; production promotion is prohibited."
+      - name: Retain immutable read-only diagnostic outcome
+        if: always()
+        env:
+          SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
+          STAGING_RUN_ID: ${{ github.event.workflow_run.id }}
+          STAGING_RUN_ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+          ADMISSION_OUTCOME: ${{ steps.admission.outcome }}
+          ADMISSION_ELIGIBLE: ${{ steps.admission.outputs.eligible }}
+          IDENTITY_OUTCOME: ${{ steps.identity.outcome }}
+          SMOKE_OUTCOME: ${{ steps.smoke.outcome }}
+          FINAL_IDENTITY_OUTCOME: ${{ steps.final-identity.outcome }}
+        run: node apps/website/scripts/cloudflare-recovery-diagnostic-receipt.mjs
+      - name: Upload diagnostic evidence without changing staging authority
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: staging-read-only-recovery-${{ github.event.workflow_run.id }}-${{ github.event.workflow_run.run_attempt }}-${{ github.run_id }}
+          path: apps/website/recovery-evidence/read-only-diagnostic.json
+          if-no-files-found: error
+          retention-days: 14
