@@ -147,6 +147,16 @@ const contracts: Evidence[] = [
     scope: 'source-contract',
   },
   {
+    path: 'apps/website/src/sections/home/ProductionWorkflow/ProductionWorkflow.tsx',
+    line: 291,
+    kind: 'raw-anchor',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle:
+      'bounds ProductionWorkflow publish destinations to fixed external URLs',
+    scope: 'source-contract',
+  },
+  {
     path: 'apps/website/src/sections/home/Roadmap/Roadmap.tsx',
     line: 362,
     kind: 'canonical-button',

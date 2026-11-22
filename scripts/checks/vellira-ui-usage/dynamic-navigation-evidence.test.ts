@@ -133,6 +133,27 @@ function validCodeShowcaseSources(source: string): boolean {
   );
 }
 
+function validPublishTargetSource(source: string): boolean {
+  const destinations = [...source.matchAll(/\s+href: '([^']+)'/g)].map(
+    (match) => match[1]
+  );
+  const link = anchorAttributes(source).find(
+    (item) => item.href === '{target.href}'
+  );
+  return (
+    JSON.stringify(destinations) ===
+      JSON.stringify([
+        'https://www.npmjs.com/package/@vellira-ui/react',
+        'https://github.com/vellira-dev/Vellira',
+        'https://storybook.vellira.dev',
+        'https://docs.vellira.dev',
+      ]) &&
+    source.includes('publishTargets.map((target)') &&
+    link?.target === "'_blank'" &&
+    link.rel === "'noreferrer'"
+  );
+}
+
 function validCanonicalLinkSource(source: string): boolean {
   return (
     source.includes('if (!href) return <>{children}</>;') &&
@@ -225,6 +246,31 @@ describe('dynamic website navigation evidence (source contracts)', () => {
           "rel='noreferrer noopener'\n              >\n                Docs",
           "rel='unsafe'\n              >\n                Docs"
         )
+      )
+    ).toBe(false);
+  });
+
+  it('bounds ProductionWorkflow publish destinations to fixed external URLs', () => {
+    const source = sourceOf(
+      'sections/home/ProductionWorkflow/ProductionWorkflow.tsx'
+    );
+    expect(validPublishTargetSource(source)).toBe(true);
+    expect(
+      validPublishTargetSource(
+        source.replace(
+          'https://www.npmjs.com/package/@vellira-ui/react',
+          'https://evil.invalid/package'
+        )
+      )
+    ).toBe(false);
+    expect(
+      validPublishTargetSource(
+        source.replace('href={target.href}', 'href={untrustedDestination}')
+      )
+    ).toBe(false);
+    expect(
+      validPublishTargetSource(
+        source.replace("rel='noreferrer'", "rel='unsafe'")
       )
     ).toBe(false);
   });
