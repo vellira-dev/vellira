@@ -19,6 +19,9 @@ let emailUnavailable = false;
 let mockedConflict = false;
 let readUnavailable = false;
 let unexpectedMutations = 0;
+let deletionReads = 0;
+let deletionState = 'none';
+let deletionUnavailable = false;
 
 await context.route('**/v1/**', async (route) => {
   const request = route.request();
@@ -63,6 +66,15 @@ await context.route('**/v1/**', async (route) => {
       await reply(503, { error: { code: 'account_email_unavailable' } });
     } else {
       await reply(200, { email: { address: 'owner@example.test', verified: true } });
+    }
+    return;
+  }
+  if (path === '/v1/auth/account/deletion/status' && method === 'GET') {
+    deletionReads += 1;
+    if (deletionUnavailable) {
+      await reply(503, { error: { code: 'account_deletion_status_unavailable' } });
+    } else {
+      await reply(200, { deletion: { status: deletionState } });
     }
     return;
   }
@@ -130,6 +142,8 @@ try {
   const deleteTrigger = danger.getByRole('button', { name: 'Delete account', exact: true });
   assert.equal(await deleteTrigger.isDisabled(), true,
     'Production-shaped Account Settings must not expose account deletion before approved backend erasure');
+  await danger.getByText('No deletion request is pending.', { exact: true }).waitFor();
+  assert.equal(deletionReads, 1, 'Read-only deletion status must be loaded once per authenticated view');
   assert.ok((await danger.locator('#account-deletion-help').textContent()).includes(
     'only after secure identity verification'),
   'Unavailable account deletion must have a truthful explanation');
@@ -245,6 +259,30 @@ try {
   await page.getByRole('button', { name: 'Try again' }).click();
   await page.getByRole('textbox', { name: 'Full name' }).waitFor();
 
+  // A real pending_review state is observational only: the user remains
+  // active, no erasure is claimed and the destructive control stays disabled.
+  deletionState = 'pending_review';
+  await page.reload();
+  await danger.getByText('Deletion request pending review.', { exact: false }).waitFor();
+  assert.ok((await danger.locator('[data-account-deletion-status]').textContent())
+    .includes('no data has been erased'));
+  assert.equal(await deleteTrigger.isDisabled(), true);
+
+  // Failure must not turn into an invented 'none' or 'completed' status.
+  deletionUnavailable = true;
+  await page.reload();
+  await danger.getByText('Deletion request status is temporarily unavailable.', { exact: true }).waitFor();
+  assert.equal(await danger.getByText('No deletion request is pending.', { exact: true }).count(), 0);
+  assert.equal(await danger.getByText('Deletion request pending review.', { exact: false }).count(), 0);
+  deletionUnavailable = false;
+  deletionState = 'none';
+  const profileReadsBeforeStatusRetry = profileReads;
+  await danger.getByRole('button', { name: 'Retry status' }).click();
+  await danger.getByText('No deletion request is pending.', { exact: true }).waitFor();
+  assert.equal(profileReads, profileReadsBeforeStatusRetry,
+    'A status retry must not reset or reload the editable profile');
+  assert.equal(await deleteTrigger.isDisabled(), true);
+
   await fullName.fill('Pending mobile edit');
   for (const width of [768, 390, 320]) {
     await page.setViewportSize({ width, height: 820 });
@@ -268,6 +306,7 @@ try {
   assert.equal(await dirtyBar.count(), 0, 'Mobile discard hides the bar');
   assert.equal(await emailUpdate.isDisabled(), true, 'Status changes may not enable an unsafe email edit');
   assert.equal(unexpectedMutations, 0);
+  assert.ok(deletionReads >= 4, 'Deletion request status must remain a scoped GET-only view');
   assert.ok(profileReads >= 3, 'retry must issue a new GET');
   console.log('OK Account Profile: canonical email, no duplicate details, GET/PATCH, CSRF, conflict, independent retries and mobile geometry');
 } finally {

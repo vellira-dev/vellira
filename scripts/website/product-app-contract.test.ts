@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   bootstrapPersonalWorkspace,
+  getAccountDeletionRequestStatus,
   listWorkspaces,
   login,
   resendCurrentVerification,
@@ -61,6 +62,62 @@ describe('Vellira App browser API contract', () => {
         cache: 'no-store',
       })
     );
+  });
+
+  it('reads only the authenticated deletion request status, without CSRF or mutation', async () => {
+    for (const status of ['none', 'pending_review'] as const) {
+      const fetchMock = vi.fn<typeof fetch>(
+        async () =>
+          new Response(JSON.stringify({ deletion: { status } }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+      );
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(getAccountDeletionRequestStatus()).resolves.toBe(status);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchMock.mock.calls[0] ?? [];
+      expect(url).toBe(
+        'https://api.vellira.dev/v1/auth/account/deletion/status'
+      );
+      expect(init).toEqual(
+        expect.objectContaining({
+          credentials: 'include',
+          cache: 'no-store',
+        })
+      );
+      expect(init?.method).toBeUndefined();
+      expect(init?.body).toBeUndefined();
+      expect(new Headers(init?.headers).has('X-CSRF-Token')).toBe(false);
+    }
+  });
+
+  it('rejects unsupported deletion states instead of inventing completed erasure', async () => {
+    let payload: unknown = { deletion: { status: 'completed' } };
+    const fetchMock = vi.fn<typeof fetch>(
+      async () =>
+        new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    for (const value of [
+      { deletion: { status: 'completed' } },
+      { deletion: { status: 'erased' } },
+      { deletion: { status: null } },
+      { deletion: {} },
+      { deletion: null },
+      {},
+    ]) {
+      payload = value;
+      await expect(getAccountDeletionRequestStatus()).rejects.toThrow(
+        'Invalid deletion status response'
+      );
+    }
   });
 
   it('retrieves session CSRF before personal workspace bootstrap', async () => {
