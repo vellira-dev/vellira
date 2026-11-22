@@ -142,7 +142,10 @@ describe('website structural navigation contracts (source evidence)', () => {
       );
     }
     const source = readFileSync(
-      new URL('../../../apps/website/src/config/navigation.ts', import.meta.url),
+      new URL(
+        '../../../apps/website/src/config/navigation.ts',
+        import.meta.url
+      ),
       'utf8'
     );
     const hrefs = [...source.matchAll(/^    href: '([^']+)'/gm)].map(
