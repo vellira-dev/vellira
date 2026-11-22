@@ -105,45 +105,30 @@ function validDemoSource(source: string): boolean {
 }
 
 function validCodeShowcaseSources(source: string): boolean {
-  const compactSource = compact(source);
-  const expectedStorybook = {
-    button: 'primitives-button',
-    input: 'primitives-input',
-    modal: 'components-modal',
-    dropdown: 'components-dropdown',
-  } as const;
+  const normalized = compact(source);
   const docs = anchorAttributes(source).find(
     (item) => item.href === '{getDocsLink(platform, activeExample)}'
   );
   const storybook = anchorAttributes(source).find(
     (item) => item.href === '{storybookLinks[activeExample]}'
   );
-  const safeExternal = (anchor: (typeof docs) | undefined) =>
+  const validAnchor = (anchor: typeof docs) =>
     anchor?.target === "'_blank'" &&
     anchor.rel === "'noreferrer noopener'";
-
+  const expected = [
+    "type Platform = 'react' | 'native';",
+    "type ExampleName = 'button' | 'input' | 'modal' | 'dropdown';",
+    "const docsPlatform = platform === 'react' ? 'react' : 'react-native';",
+    'return `https://docs.vellira.dev/${docsPlatform}/${example}`;',
+    "button: 'https://storybook.vellira.dev/?path=/docs/primitives-button--docs'",
+    "input: 'https://storybook.vellira.dev/?path=/docs/primitives-input--docs'",
+    "modal: 'https://storybook.vellira.dev/?path=/docs/components-modal--docs'",
+    "dropdown: 'https://storybook.vellira.dev/?path=/docs/components-dropdown--docs'",
+  ];
   return (
-    compactSource.includes(compact("type Platform = 'react' | 'native';")) &&
-    compactSource.includes(
-      compact("type ExampleName = 'button' | 'input' | 'modal' | 'dropdown';")
-    ) &&
-    compactSource.includes(
-      compact(
-        "const docsPlatform = platform === 'react' ? 'react' : 'react-native';"
-      )
-    ) &&
-    compactSource.includes(
-      compact('return `https://docs.vellira.dev/${docsPlatform}/${example}`;')
-    ) &&
-    Object.entries(expectedStorybook).every(([example, slug]) =>
-      compactSource.includes(
-        compact(
-          `${example}: 'https://storybook.vellira.dev/?path=/docs/${slug}--docs'`
-        )
-      )
-    ) &&
-    safeExternal(docs) &&
-    safeExternal(storybook)
+    expected.every((fragment) => normalized.includes(compact(fragment))) &&
+    validAnchor(docs) &&
+    validAnchor(storybook)
   );
 }
 
