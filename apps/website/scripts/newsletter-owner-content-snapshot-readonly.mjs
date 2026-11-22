@@ -21,8 +21,27 @@ export async function inspectNewsletterOwnerContentSnapshotReadOnly({
       !token.trim() || typeof metadataFetcher !== 'function' ||
       typeof contentFetcher !== 'function') return unverified('invalid_reader');
 
+  // Capture deployment and serving-version identities privately for both
+  // continuity inspections. The existing inspector deliberately redacts IDs.
+  // Comparing only its public "stable" status would miss a cutover between reads.
+  const deploymentIdentities = [];
   const metadata = () => inspectNewsletterOwnerWithProtectedReader({
-    accountId, token, fetcher: metadataFetcher,
+    accountId,
+    token,
+    fetcher: async (url, options) => {
+      const response = await metadataFetcher(url, options);
+      if (url.pathname.endsWith('/deployments') && url.search === '?page=1&per_page=2' &&
+          response?.status === 200) {
+        const payload = await response.clone().json();
+        const current = payload?.result?.deployments?.[0];
+        const deploymentId = current?.id;
+        const versionId = current?.versions?.[0]?.version_id;
+        if (typeof deploymentId === 'string' && typeof versionId === 'string') {
+          deploymentIdentities.push(deploymentId + ':' + versionId);
+        }
+      }
+      return response;
+    },
   });
   try {
     const before = await metadata();
@@ -74,6 +93,10 @@ export async function inspectNewsletterOwnerContentSnapshotReadOnly({
     const after = await metadata();
     if (after.status !== 'stable_single_version_observed') {
       return unverified('deployment_postcheck_unverified');
+    }
+    if (deploymentIdentities.length !== 4 ||
+        !deploymentIdentities.every((identity) => identity === deploymentIdentities[0])) {
+      return unverified('deployment_changed_during_snapshot');
     }
     return {
       status: 'script_scoped_content_snapshot_observed',
