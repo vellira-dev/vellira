@@ -39,3 +39,16 @@ test('read-only route diagnostics run only after deployment attestation and neve
   assert.match(workflow, /cloudflare-route-smoke-readonly-retry\.mjs/);
   assert.doesNotMatch(workflow, /actions: write|contents: write|wrangler deploy|CLOUDFLARE_API_TOKEN|dispatches/);
 });
+
+test('single automatic attempt and durable diagnostic receipt keep original staging failure authoritative', () => {
+  assert.match(workflow, /github\.run_attempt == 1/);
+  assert.match(workflow, /id: identity/);
+  assert.match(workflow, /id: final-identity/);
+  assert.match(workflow, /if: always\(\)/);
+  assert.match(workflow, /cloudflare-recovery-diagnostic-receipt\.mjs/);
+  assert.match(workflow, /staging-read-only-recovery-/);
+  assert.match(workflow, /retention-days: 14/);
+  assert.match(workflow, /if-no-files-found: error/);
+  assert.match(workflow, /steps\.admission\.outputs\.eligible == 'true' && steps\.identity\.outcome == 'success'/);
+  assert.doesNotMatch(workflow, /actions: write|contents: write|CLOUDFLARE_API_TOKEN|wrangler deploy|dispatches/);
+});
