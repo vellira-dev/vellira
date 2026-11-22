@@ -127,6 +127,60 @@ describe('website structural navigation contracts (source evidence)', () => {
     );
   });
 
+  it('bounds SiteHeader marketing links to declared navigation destinations', () => {
+    const { ast, matches } = openings(
+      'components/layout/SiteHeader/SiteHeader.tsx',
+      'Link'
+    );
+    const marketing = matches.filter(
+      (link) => attribute(link, 'href')?.getText(ast) === 'href={item.href}'
+    );
+    expect(marketing).toHaveLength(2);
+    for (const link of marketing) {
+      expect(attribute(link, 'onClick')?.getText(ast)).toContain(
+        'scrollToAnchor(item.hash)'
+      );
+    }
+    const source = readFileSync(
+      new URL('../../../apps/website/src/config/navigation.ts', import.meta.url),
+      'utf8'
+    );
+    const hrefs = [...source.matchAll(/href: '([^']+)'/g)].map(
+      (match) => match[1]
+    );
+    expect(hrefs).toEqual([
+      '/components',
+      '/blog',
+      '/#themes',
+      '/#platforms',
+      '/#roadmap',
+      '/#pro',
+      'https://docs.vellira.dev',
+      'https://storybook.vellira.dev',
+      'https://github.com/vellira-dev/vellira',
+    ]);
+  });
+
+  it('bounds SiteHeader external actions to protected destinations', () => {
+    const { ast, matches } = openings(
+      'components/layout/SiteHeader/SiteHeader.tsx',
+      'a'
+    );
+    const external = matches.filter(
+      (link) => attribute(link, 'href')?.getText(ast) === 'href={link.href}'
+    );
+    expect(external).toHaveLength(2);
+    for (const link of external) {
+      expect(attribute(link, 'target')?.getText(ast)).toBe("target='_blank'");
+      expect(attribute(link, 'rel')?.getText(ast)).toBe(
+        "rel='noreferrer noopener'"
+      );
+      expect(attribute(link, 'aria-label')?.getText(ast)).toBe(
+        'aria-label={link.label}'
+      );
+    }
+  });
+
   it('keeps external workspace navigation protected and drawer-aware', () => {
     const { ast, matches } = openings('product-app/AppShell.tsx', 'a');
     const docs = matches.find((link) =>
