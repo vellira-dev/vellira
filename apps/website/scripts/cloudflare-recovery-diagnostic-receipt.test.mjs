@@ -64,6 +64,7 @@ test('inconsistent or incomplete downstream evidence fails closed', () => {
     { sourceSha: 'bad' },
     { stagingRunId: 0 },
     { diagnosticRunAttempt: 0 },
+    { diagnosticRunAttempt: 2 },
     { eligible: false },
     { identityOutcome: 'failure' },
     { smokeOutcome: 'failure' },
