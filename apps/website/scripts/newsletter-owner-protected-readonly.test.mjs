@@ -68,6 +68,21 @@ test('real reader is GET-only, fixed-host and serves the existing continuity pro
   }
 });
 
+test('reader accepts complete five-group UUIDs and rejects truncated identifiers', async () => {
+  const cloudflare = fakeCloudflare();
+  const read = makeNewsletterOwnerReadonlyReader({
+    accountId, token: 'private-token', fetcher: cloudflare.fetcher,
+  });
+  const detail = await read(root + '/deployments/' + deploymentId);
+  const version = await read(root + '/versions/' + versionId);
+  assert.equal(detail.result.id, deploymentId);
+  assert.equal(version.result.id, versionId);
+  assert.equal(cloudflare.calls.length, 2);
+  const truncated = '22222222-2222-4222-222222222222';
+  await assert.rejects(read(root + '/versions/' + truncated));
+  assert.equal(cloudflare.calls.length, 2);
+});
+
 test('reader rejects unexpected endpoints, account crossover and path traversal before fetch', async () => {
   const cloudflare = fakeCloudflare();
   const read = makeNewsletterOwnerReadonlyReader({
