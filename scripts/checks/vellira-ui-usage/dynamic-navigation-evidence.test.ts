@@ -122,8 +122,7 @@ function validCodeShowcaseSources(source: string): boolean {
     "dropdown: 'https://storybook.vellira.dev/?path=/docs/components-dropdown--docs'",
   ];
   const validDocs =
-    docs?.target === "'_blank'" &&
-    docs.rel === "'noreferrer noopener'";
+    docs?.target === "'_blank'" && docs.rel === "'noreferrer noopener'";
   const validStorybook =
     storybook?.target === "'_blank'" &&
     storybook.rel === "'noreferrer noopener'";
