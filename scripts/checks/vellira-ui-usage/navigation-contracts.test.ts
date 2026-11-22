@@ -269,6 +269,29 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(source).toContain('router.push(`/components/${result.slug}`)');
   });
 
+  it('keeps mobile account links aligned with authorized header routes', () => {
+    const { ast, matches } = openings('product-app/AppHeader.tsx', 'Link');
+    expect(matches).toHaveLength(2);
+    expect(matches.map((link) => attribute(link, 'href')?.getText(ast))).toEqual([
+      "href='/app/settings'",
+      "href='/app/settings/billing'",
+    ]);
+    for (const link of matches) {
+      expect(attribute(link, 'onClick')?.getText(ast)).toBe(
+        'onClick={onNavigate}'
+      );
+    }
+
+    const source = readFileSync(
+      new URL('../../../apps/website/src/product-app/AppHeader.tsx', import.meta.url),
+      'utf8'
+    );
+    expect(source).toContain("router.push('/app/settings')");
+    expect(source).toContain("router.push('/app/settings/billing')");
+    expect(source.match(/workspace\\?\\.membership.role === 'owner'/g)).toHaveLength(2);
+    expect(source).toContain("{status === 'ready' && (");
+  });
+
   it('keeps external workspace navigation protected and drawer-aware', () => {
     const { ast, matches } = openings('product-app/AppShell.tsx', 'a');
     const docs = matches.find((link) =>
