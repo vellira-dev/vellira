@@ -145,7 +145,7 @@ describe('website structural navigation contracts (source evidence)', () => {
       new URL('../../../apps/website/src/config/navigation.ts', import.meta.url),
       'utf8'
     );
-    const hrefs = [...source.matchAll(/href: '([^']+)'/g)].map(
+    const hrefs = [...source.matchAll(/^    href: '([^']+)'/gm)].map(
       (match) => match[1]
     );
     expect(hrefs).toEqual([
