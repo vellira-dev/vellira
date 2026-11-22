@@ -54,6 +54,60 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(attribute(link, 'onClick')?.getText(ast)).toContain('onNavigate');
   });
 
+  it('preserves catalog card routes and workspace context hint', () => {
+    const { ast, matches } = openings(
+      'component-catalog/shared/ComponentsCatalog/ComponentsCatalog.tsx',
+      'Link'
+    );
+    expect(matches).toHaveLength(1);
+    const [link] = matches;
+    const href = attribute(link, 'href')?.getText(ast);
+    expect(href).toContain('/components/${component.slug}');
+    expect(href).toContain("workspaceContextRequested ? '?from=app' : ''");
+    expect(attribute(link, 'key')?.getText(ast)).toBe('key={component.slug}');
+    const source = readFileSync(
+      new URL(
+        '../../../apps/website/src/component-catalog/shared/ComponentsCatalog/ComponentsCatalog.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    expect(source).toContain('componentGroups');
+    expect(source).toContain('group.components.map((component)');
+  });
+
+  it('keeps related component cards on canonical public routes', () => {
+    const { ast, matches } = openings(
+      'component-catalog/shared/RelatedComponents/RelatedComponents.tsx',
+      'Link'
+    );
+    expect(matches).toHaveLength(1);
+    const [link] = matches;
+    expect(attribute(link, 'href')?.getText(ast)).toBe(
+      'href={`/components/${component.slug}`}'
+    );
+    expect(attribute(link, 'key')?.getText(ast)).toBe('key={component.slug}');
+  });
+
+  it('shows workspace return only in workspace catalog context', () => {
+    const { ast, matches } = openings(
+      'component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.tsx',
+      'Link'
+    );
+    expect(matches).toHaveLength(1);
+    const [link] = matches;
+    expect(attribute(link, 'href')?.getText(ast)).toBe("href='/app'");
+    const source = readFileSync(
+      new URL(
+        '../../../apps/website/src/component-catalog/shared/ComponentNavigationShell/ComponentNavigationShell.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    expect(source).toContain('{fromWorkspace && (');
+    expect(source).toContain('Back to workspace');
+  });
+
   it('preserves active state and intercepted components navigation in AppShell', () => {
     const { ast, matches } = openings('product-app/AppShell.tsx', 'Link');
     const overview = matches.find((link) =>
