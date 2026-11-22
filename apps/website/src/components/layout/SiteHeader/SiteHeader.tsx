@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useEffect, type CSSProperties } from 'react';
+import { useCallback, useState, useEffect, useRef, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -94,6 +94,7 @@ export function SiteHeader({
   onMobileMenuOpenChange,
 }: SiteHeaderProps) {
   const pathname = usePathname();
+  const mobileMenuTriggerRef = useRef<HTMLButtonElement>(null);
   const [activeHref, setActiveHref] = useState<string | null>(null);
   const [internalMobileMenuOpen, setInternalMobileMenuOpen] = useState(false);
 
@@ -111,6 +112,11 @@ export function SiteHeader({
     [onMobileMenuOpenChange]
   );
 
+  const closeMobileNavigation = useCallback(() => {
+    setResolvedMobileMenuOpen(false);
+    mobileMenuTriggerRef.current?.focus({ preventScroll: true });
+  }, [setResolvedMobileMenuOpen]);
+
   useEffect(() => {
     if (!resolvedMobileMenuOpen) {
       return;
@@ -118,7 +124,8 @@ export function SiteHeader({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        setResolvedMobileMenuOpen(false);
+        event.preventDefault();
+        closeMobileNavigation();
       }
     };
 
@@ -142,7 +149,7 @@ export function SiteHeader({
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
     };
-  }, [resolvedMobileMenuOpen, setResolvedMobileMenuOpen]);
+  }, [resolvedMobileMenuOpen, setResolvedMobileMenuOpen, closeMobileNavigation]);
 
   useEffect(() => {
     if (pathname !== '/') {
@@ -208,6 +215,7 @@ export function SiteHeader({
       {variant === 'marketing' && (
         <div className={styles.mobileMenuTrigger}>
           <HeaderMenuButton
+            ref={mobileMenuTriggerRef}
             open={resolvedMobileMenuOpen}
             controls='mobile-site-navigation'
             openLabel='Open navigation'
@@ -222,6 +230,7 @@ export function SiteHeader({
       {variant === 'portal' && (
         <div className={styles.portalTabletMenuTrigger}>
           <HeaderMenuButton
+            ref={mobileMenuTriggerRef}
             open={resolvedMobileMenuOpen}
             controls='mobile-site-navigation'
             openLabel='Open navigation'
@@ -331,7 +340,7 @@ export function SiteHeader({
             type='button'
             className={styles.mobileNavigationBackdrop}
             aria-label='Dismiss navigation'
-            onClick={() => setResolvedMobileMenuOpen(false)}
+            onClick={closeMobileNavigation}
           />
 
           <div id='mobile-site-navigation' className={styles.mobileNavigation}>
@@ -346,7 +355,7 @@ export function SiteHeader({
                   prefetch={item.type === 'section' ? false : undefined}
                   className={styles.mobileNavigationLink}
                   onClick={(event) => {
-                    setResolvedMobileMenuOpen(false);
+                    closeMobileNavigation();
 
                     if (item.type !== 'section' || pathname !== '/') {
                       return;
@@ -437,7 +446,7 @@ export function SiteHeader({
           aria-label='Close navigation'
           aria-expanded='true'
           aria-controls='mobile-site-navigation'
-          onClick={() => setResolvedMobileMenuOpen(false)}
+          onClick={closeMobileNavigation}
           iconStart={<Close />}
         />
       )}
