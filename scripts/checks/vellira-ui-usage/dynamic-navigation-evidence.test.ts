@@ -165,6 +165,28 @@ function validCanonicalLinkSource(source: string): boolean {
   );
 }
 
+function validBlogShareSource(source: string): boolean {
+  const expected = [
+    "const SITE_URL = 'https://vellira.dev';",
+    'const articleUrl = `${SITE_URL}/blog/${slug}`;',
+    "buildShareUrl('https://www.linkedin.com/sharing/share-offsite/', {",
+    "buildShareUrl('https://twitter.com/intent/tweet', {",
+    "buildShareUrl('https://www.facebook.com/sharer/sharer.php', {",
+    "buildShareUrl('https://www.reddit.com/submit', {",
+    'url: articleUrl,',
+    'text: title,',
+    'u: articleUrl,',
+    'title,',
+    'url.searchParams.set(key, value);',
+    'shareLinks.map((link)',
+    'href={link.href}',
+    "target='_blank'",
+    "rel='noopener noreferrer'",
+    'aria-label={link.label}',
+  ];
+  return expected.every((item) => compact(source).includes(compact(item)));
+}
+
 describe('dynamic website navigation evidence (source contracts)', () => {
   it('keeps release URL in the fixed GitHub releases namespace', () => {
     const source = sourceOf('sections/home/Roadmap/Roadmap.tsx');
@@ -294,6 +316,29 @@ describe('dynamic website navigation evidence (source contracts)', () => {
           '<NextLink href={href} prefetch={prefetch} target={target} rel={rel}>',
           '<NextLink href={href}>'
         )
+      )
+    ).toBe(false);
+  });
+
+  it('bounds blog share links to declared external destinations', () => {
+    const source = sourceOf('blog/ui/BlogArticleActions.tsx');
+    expect(validBlogShareSource(source)).toBe(true);
+    expect(
+      validBlogShareSource(
+        source.replace(
+          'https://www.linkedin.com/sharing/share-offsite/',
+          'https://example.invalid/share'
+        )
+      )
+    ).toBe(false);
+    expect(
+      validBlogShareSource(
+        source.replace("rel='noopener noreferrer'", "rel='unsafe'")
+      )
+    ).toBe(false);
+    expect(
+      validBlogShareSource(
+        source.replace('href={link.href}', 'href={externalUrl}')
       )
     ).toBe(false);
   });
