@@ -115,6 +115,24 @@ const contracts: Evidence[] = [
     scope: 'source-contract',
   },
   {
+    path: 'apps/website/src/product-app/AppHeader.tsx',
+    line: 111,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle:
+      'keeps mobile account links aligned with authorized header routes',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/product-app/AppHeader.tsx',
+    line: 120,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle:
+      'keeps mobile account links aligned with authorized header routes',
+    scope: 'source-contract',
+  },
+  {
     path: 'apps/website/src/product-app/AuthFlows.tsx',
     line: 1060,
     kind: 'canonical-button',
