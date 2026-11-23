@@ -232,6 +232,41 @@ const contracts: Evidence[] = [
     testTitle: 'keeps release URL in the fixed GitHub releases namespace',
     scope: 'source-contract',
   },
+  {
+    path: 'apps/website/src/product-app/AppShell.tsx',
+    line: 418,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle:
+      'pins AppHome resource destinations and external-link safeguards',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/product-app/AppShell.tsx',
+    line: 427,
+    kind: 'raw-anchor',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle:
+      'pins AppHome resource destinations and external-link safeguards',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/product-app/AppShell.tsx',
+    line: 441,
+    kind: 'raw-anchor',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle:
+      'pins AppHome resource destinations and external-link safeguards',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/product-app/AuthSurface.tsx',
+    line: 25,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle: 'keeps AuthSurface brand navigation on the public homepage',
+    scope: 'source-contract',
+  },
 ];
 
 function key(entry: { path: string; line: number; kind: string }): string {

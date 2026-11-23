@@ -360,4 +360,57 @@ describe('website structural navigation contracts (source evidence)', () => {
     );
     expect(attribute(docs!, 'onClick')?.getText(ast)).toContain('onNavigate');
   });
+
+  it('pins AppHome resource destinations and external-link safeguards', () => {
+    const { ast, matches: links } = openings(
+      'product-app/AppShell.tsx',
+      'Link'
+    );
+    const appHome = ast.statements.find(
+      (node) => ts.isFunctionDeclaration(node) && node.name?.text === 'AppHome'
+    );
+    expect(appHome).toBeDefined();
+    const resources: ts.JsxOpeningLikeElement[] = [];
+    function visit(node: ts.Node): void {
+      if (
+        (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+        ['Link', 'a'].includes(node.tagName.getText(ast))
+      )
+        resources.push(node);
+      ts.forEachChild(node, visit);
+    }
+    visit(appHome!);
+    expect(
+      resources.map((node) => attribute(node, 'href')?.getText(ast))
+    ).toEqual([
+      "href='/components?from=app'",
+      "href='https://docs.vellira.dev/start/getting-started'",
+      "href='https://docs.vellira.dev/start/getting-started'",
+    ]);
+    expect(
+      links.some(
+        (node) =>
+          attribute(node, 'href')?.getText(ast) ===
+          "href='/components?from=app'"
+      )
+    ).toBe(true);
+    for (const external of resources.slice(1)) {
+      expect(external.tagName.getText(ast)).toBe('a');
+      expect(attribute(external, 'target')?.getText(ast)).toBe(
+        "target='_blank'"
+      );
+      expect(attribute(external, 'rel')?.getText(ast)).toBe(
+        "rel='noopener noreferrer'"
+      );
+    }
+  });
+
+  it('keeps AuthSurface brand navigation on the public homepage', () => {
+    const { ast, matches } = openings('product-app/AuthSurface.tsx', 'Link');
+    expect(matches).toHaveLength(1);
+    expect(attribute(matches[0], 'href')?.getText(ast)).toBe("href='/'");
+    expect(attribute(matches[0], 'aria-label')?.getText(ast)).toBe(
+      "aria-label='Vellira home'"
+    );
+  });
 });
