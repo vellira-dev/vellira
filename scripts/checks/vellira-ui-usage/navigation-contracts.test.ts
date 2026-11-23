@@ -297,16 +297,17 @@ describe('website structural navigation contracts (source evidence)', () => {
   });
 
   it('preserves the footer brand home destination', () => {
-    const { ast, matches } = openings('components/layout/SiteFooter/SiteFooter.tsx', 'Link');
+    const { ast, matches } = openings(
+      'components/layout/SiteFooter/SiteFooter.tsx',
+      'Link'
+    );
     expect(matches).toHaveLength(1);
     const [brand] = matches;
     expect(attribute(brand, 'href')?.getText(ast)).toBe("href='/'");
     expect(attribute(brand, 'aria-label')?.getText(ast)).toBe(
       "aria-label='Vellira home'"
     );
-    expect(attribute(brand, 'prefetch')?.getText(ast)).toBe(
-      'prefetch={false}'
-    );
+    expect(attribute(brand, 'prefetch')?.getText(ast)).toBe('prefetch={false}');
   });
 
   it('keeps shared HeaderBrand navigation on known app and site routes', () => {
@@ -338,7 +339,10 @@ describe('website structural navigation contracts (source evidence)', () => {
     );
     expect(site).toContain("brandHref='/'");
     const app = readFileSync(
-      new URL('../../../apps/website/src/product-app/AppHeader.tsx', import.meta.url),
+      new URL(
+        '../../../apps/website/src/product-app/AppHeader.tsx',
+        import.meta.url
+      ),
       'utf8'
     );
     expect(app).toContain("brandHref='/app'");
