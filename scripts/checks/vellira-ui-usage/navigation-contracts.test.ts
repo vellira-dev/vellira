@@ -362,7 +362,10 @@ describe('website structural navigation contracts (source evidence)', () => {
   });
 
   it('pins AppHome resource destinations and external-link safeguards', () => {
-    const { ast, matches: links } = openings('product-app/AppShell.tsx', 'Link');
+    const { ast, matches: links } = openings(
+      'product-app/AppShell.tsx',
+      'Link'
+    );
     const appHome = ast.statements.find(
       (node) =>
         ts.isFunctionDeclaration(node) && node.name?.text === 'AppHome'
@@ -378,7 +381,9 @@ describe('website structural navigation contracts (source evidence)', () => {
       ts.forEachChild(node, visit);
     }
     visit(appHome!);
-    expect(resources.map((node) => attribute(node, 'href')?.getText(ast))).toEqual([
+    expect(
+      resources.map((node) => attribute(node, 'href')?.getText(ast))
+    ).toEqual([
       "href='/components?from=app'",
       "href='https://docs.vellira.dev/start/getting-started'",
       "href='https://docs.vellira.dev/start/getting-started'",
@@ -391,7 +396,9 @@ describe('website structural navigation contracts (source evidence)', () => {
     ).toBe(true);
     for (const external of resources.slice(1)) {
       expect(external.tagName.getText(ast)).toBe('a');
-      expect(attribute(external, 'target')?.getText(ast)).toBe("target='_blank'");
+      expect(attribute(external, 'target')?.getText(ast)).toBe(
+        "target='_blank'"
+      );
       expect(attribute(external, 'rel')?.getText(ast)).toBe(
         "rel='noopener noreferrer'"
       );
