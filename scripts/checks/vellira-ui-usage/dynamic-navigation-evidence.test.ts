@@ -165,7 +165,6 @@ function validCanonicalLinkSource(source: string): boolean {
   );
 }
 
-
 function validBlogShareSource(source: string): boolean {
   const expected = [
     "const SITE_URL = 'https://vellira.dev';",
@@ -185,9 +184,7 @@ function validBlogShareSource(source: string): boolean {
     "rel='noopener noreferrer'",
     'aria-label={link.label}',
   ];
-  return expected.every((item) =>
-    compact(source).includes(compact(item))
-  );
+  return expected.every((item) => compact(source).includes(compact(item)));
 }
 
 describe('dynamic website navigation evidence (source contracts)', () => {
