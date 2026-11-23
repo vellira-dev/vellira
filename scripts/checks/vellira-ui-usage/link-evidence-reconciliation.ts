@@ -77,7 +77,8 @@ const contracts: Evidence[] = [
     line: 24,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'keeps shared HeaderBrand navigation on known app and site routes',
+    testTitle:
+      'keeps shared HeaderBrand navigation on known app and site routes',
     scope: 'source-contract',
   },
   {
