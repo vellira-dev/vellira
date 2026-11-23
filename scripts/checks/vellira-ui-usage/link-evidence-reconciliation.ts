@@ -73,6 +73,22 @@ const contracts: Evidence[] = [
     scope: 'source-contract',
   },
   {
+    path: 'apps/website/src/components/layout/HeaderChrome/HeaderChrome.tsx',
+    line: 24,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle: 'keeps shared HeaderBrand navigation on known app and site routes',
+    scope: 'source-contract',
+  },
+  {
+    path: 'apps/website/src/components/layout/SiteFooter/SiteFooter.tsx',
+    line: 96,
+    kind: 'next-link',
+    testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
+    testTitle: 'preserves the footer brand home destination',
+    scope: 'source-contract',
+  },
+  {
     path: 'apps/website/src/components/layout/SiteHeader/HeaderSearch/HeaderSearch.tsx',
     line: 285,
     kind: 'next-link',
