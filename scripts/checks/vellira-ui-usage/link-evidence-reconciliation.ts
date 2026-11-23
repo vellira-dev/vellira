@@ -237,7 +237,8 @@ const contracts: Evidence[] = [
     line: 418,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'pins AppHome resource destinations and external-link safeguards',
+    testTitle:
+      'pins AppHome resource destinations and external-link safeguards',
     scope: 'source-contract',
   },
   {
@@ -245,7 +246,8 @@ const contracts: Evidence[] = [
     line: 427,
     kind: 'raw-anchor',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'pins AppHome resource destinations and external-link safeguards',
+    testTitle:
+      'pins AppHome resource destinations and external-link safeguards',
     scope: 'source-contract',
   },
   {
@@ -253,7 +255,8 @@ const contracts: Evidence[] = [
     line: 441,
     kind: 'raw-anchor',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'pins AppHome resource destinations and external-link safeguards',
+    testTitle:
+      'pins AppHome resource destinations and external-link safeguards',
     scope: 'source-contract',
   },
   {
