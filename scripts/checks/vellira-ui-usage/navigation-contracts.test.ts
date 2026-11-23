@@ -272,10 +272,9 @@ describe('website structural navigation contracts (source evidence)', () => {
   it('keeps mobile account links aligned with authorized header routes', () => {
     const { ast, matches } = openings('product-app/AppHeader.tsx', 'Link');
     expect(matches).toHaveLength(2);
-    expect(matches.map((link) => attribute(link, 'href')?.getText(ast))).toEqual([
-      "href='/app/settings'",
-      "href='/app/settings/billing'",
-    ]);
+    expect(
+      matches.map((link) => attribute(link, 'href')?.getText(ast))
+    ).toEqual(["href='/app/settings'", "href='/app/settings/billing'"]);
     for (const link of matches) {
       expect(attribute(link, 'onClick')?.getText(ast)).toBe(
         'onClick={onNavigate}'

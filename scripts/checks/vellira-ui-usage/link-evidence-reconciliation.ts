@@ -119,7 +119,8 @@ const contracts: Evidence[] = [
     line: 111,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'keeps mobile account links aligned with authorized header routes',
+    testTitle:
+      'keeps mobile account links aligned with authorized header routes',
     scope: 'source-contract',
   },
   {
@@ -127,7 +128,8 @@ const contracts: Evidence[] = [
     line: 120,
     kind: 'next-link',
     testFile: 'scripts/checks/vellira-ui-usage/navigation-contracts.test.ts',
-    testTitle: 'keeps mobile account links aligned with authorized header routes',
+    testTitle:
+      'keeps mobile account links aligned with authorized header routes',
     scope: 'source-contract',
   },
   {
