@@ -367,8 +367,7 @@ describe('website structural navigation contracts (source evidence)', () => {
       'Link'
     );
     const appHome = ast.statements.find(
-      (node) =>
-        ts.isFunctionDeclaration(node) && node.name?.text === 'AppHome'
+      (node) => ts.isFunctionDeclaration(node) && node.name?.text === 'AppHome'
     );
     expect(appHome).toBeDefined();
     const resources: ts.JsxOpeningLikeElement[] = [];
@@ -391,7 +390,8 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(
       links.some(
         (node) =>
-          attribute(node, 'href')?.getText(ast) === "href='/components?from=app'"
+          attribute(node, 'href')?.getText(ast) ===
+          "href='/components?from=app'"
       )
     ).toBe(true);
     for (const external of resources.slice(1)) {
