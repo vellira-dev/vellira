@@ -267,6 +267,15 @@ const contracts: Evidence[] = [
     testTitle: 'keeps AuthSurface brand navigation on the public homepage',
     scope: 'source-contract',
   },
+  {
+    path: 'apps/website/src/blog/ui/BlogArticleActions.tsx',
+    line: 330,
+    kind: 'canonical-button',
+    testFile:
+      'scripts/checks/vellira-ui-usage/dynamic-navigation-evidence.test.ts',
+    testTitle: 'bounds blog share links to declared external destinations',
+    scope: 'source-contract',
+  },
 ];
 
 function key(entry: { path: string; line: number; kind: string }): string {
