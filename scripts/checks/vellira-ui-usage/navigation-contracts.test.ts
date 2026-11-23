@@ -296,6 +296,58 @@ describe('website structural navigation contracts (source evidence)', () => {
     expect(source).toContain("{status === 'ready' && (");
   });
 
+  it('preserves the footer brand home destination', () => {
+    const { ast, matches } = openings(
+      'components/layout/SiteFooter/SiteFooter.tsx',
+      'Link'
+    );
+    expect(matches).toHaveLength(1);
+    const [brand] = matches;
+    expect(attribute(brand, 'href')?.getText(ast)).toBe("href='/'");
+    expect(attribute(brand, 'aria-label')?.getText(ast)).toBe(
+      "aria-label='Vellira home'"
+    );
+    expect(attribute(brand, 'prefetch')?.getText(ast)).toBe('prefetch={false}');
+  });
+
+  it('keeps shared HeaderBrand navigation on known app and site routes', () => {
+    const { ast, matches } = openings(
+      'components/layout/HeaderChrome/HeaderChrome.tsx',
+      'Link'
+    );
+    expect(matches).toHaveLength(1);
+    const [brand] = matches;
+    expect(attribute(brand, 'href')?.getText(ast)).toBe('href={href}');
+    expect(attribute(brand, 'aria-label')?.getText(ast)).toBe(
+      'aria-label={ariaLabel}'
+    );
+
+    const chrome = readFileSync(
+      new URL(
+        '../../../apps/website/src/components/layout/HeaderChrome/HeaderChrome.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    expect(chrome).toContain('<HeaderBrand href={brandHref} />');
+    const site = readFileSync(
+      new URL(
+        '../../../apps/website/src/components/layout/SiteHeader/SiteHeader.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    expect(site).toContain("brandHref='/'");
+    const app = readFileSync(
+      new URL(
+        '../../../apps/website/src/product-app/AppHeader.tsx',
+        import.meta.url
+      ),
+      'utf8'
+    );
+    expect(app).toContain("brandHref='/app'");
+  });
+
   it('keeps external workspace navigation protected and drawer-aware', () => {
     const { ast, matches } = openings('product-app/AppShell.tsx', 'a');
     const docs = matches.find((link) =>
