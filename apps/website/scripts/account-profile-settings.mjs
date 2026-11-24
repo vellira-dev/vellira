@@ -302,10 +302,31 @@ try {
     const mobileBar = await dirtyBar.boundingBox();
     if (!mobileBar) throw new Error('Dirty action bar is not visible on viewport ' + width);
     assert.ok(mobileBar.x >= 0 && mobileBar.x + mobileBar.width <= width + 1, 'Sticky bar must fit viewport ' + width);
-    assert.equal(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
-      false,
-      'Account profile must fit viewport ' + width
+    const overflow = await page.evaluate(() => {
+      const viewport = window.innerWidth;
+      const pageWidth = document.documentElement.scrollWidth;
+      const offenders = [...document.querySelectorAll('body *')]
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            tag: element.tagName.toLowerCase(),
+            className: typeof element.className === 'string' ? element.className.slice(0, 160) : '',
+            text: (element.textContent || '').trim().slice(0, 80),
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+          };
+        })
+        .filter((item) => item.right > viewport + 1 || item.left < -1)
+        .sort((a, b) => b.right - a.right)
+        .slice(0, 12);
+      return { viewport, pageWidth, offenders };
+    });
+    assert.ok(
+      overflow.pageWidth <= overflow.viewport,
+      'Account profile must fit viewport ' + width +
+        '; overflow diagnostics: ' + JSON.stringify(overflow)
     );
   }
   await dirtyBar.getByRole('button', { name: 'Discard' }).click();
