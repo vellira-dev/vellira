@@ -69,6 +69,7 @@ export function AccountDeletionPanel() {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  const [statusMustBeChecked, setStatusMustBeChecked] = useState(false);
   const [previewStatus, setPreviewStatus] =
     useState<AccountDeletionRequestStatus>('none');
   const [storedRead, setStoredRead] = useState<DeletionRead>({
@@ -127,6 +128,7 @@ export function AccountDeletionPanel() {
     submittingRef.current = true;
     setSubmitting(true);
     setRequestError(null);
+    setStatusMustBeChecked(false);
     const initiatingUser = userId;
     try {
       // Server owns the grant in a one-use HttpOnly cookie. Never store it in
@@ -144,10 +146,25 @@ export function AccountDeletionPanel() {
       setDialogUserId(null);
     } catch (cause) {
       if (identityRef.current === initiatingUser) {
-        setRequestError(requestFailureMessage(cause));
-        // A timeout/ambiguous acknowledgment is NOT proof of failure or
-        // completion. Force a fresh read from the authoritative status API.
-        setRevision((current) => current + 1);
+        if (
+          cause instanceof VelliraApiError &&
+          cause.code === 'deletion_already_requested'
+        ) {
+          setDialogUserId(null);
+          setRevision((current) => current + 1);
+        } else {
+          setRequestError(requestFailureMessage(cause));
+          // Any unknown acknowledgment may mean the request COMMITTED.
+          // Refuse another submission until the status is checked.
+          if (
+            !(cause instanceof VelliraApiError) ||
+            !['step_up_denied', 'rate_limited', 'step_up_required', 'csrf_invalid'].includes(
+              cause.code
+            )
+          ) {
+            setStatusMustBeChecked(true);
+          }
+        }
       }
     } finally {
       setPassword('');
@@ -179,6 +196,7 @@ export function AccountDeletionPanel() {
             setDialogUserId(nextOpen && mayOpen ? userId : null);
             setPassword('');
             setRequestError(null);
+            setStatusMustBeChecked(false);
           }}
           closeOnOutsidePress={false}
         >
@@ -200,7 +218,9 @@ export function AccountDeletionPanel() {
               <Modal.Content size='sm' scrollBehavior='inside'>
                 <Modal.Header>
                   <div>
-                    <Modal.Title>Request account deletion?</Modal.Title>
+                    <Modal.Title>
+                      {previewEnabled ? 'Delete your account?' : 'Request account deletion?'}
+                    </Modal.Title>
                     <Modal.Description>
                       Deletion is irreversible after execution. A request does
                       not mean your account is already deleted.
@@ -249,14 +269,32 @@ export function AccountDeletionPanel() {
                       Cancel
                     </Button>
                   </Modal.Close>
-                  <Button
-                    color='danger'
-                    type='button'
-                    disabled={previewEnabled || !password || submitting}
-                    onClick={() => void submit()}
-                  >
-                    {submitting ? 'Submitting…' : 'Submit deletion request'}
-                  </Button>
+                  {statusMustBeChecked ? (
+                    <Button
+                      type='button'
+                      appearance='outline'
+                      color='neutral'
+                      onClick={() => {
+                        setDialogUserId(null);
+                        setRevision((current) => current + 1);
+                      }}
+                    >
+                      Check request status
+                    </Button>
+                  ) : (
+                    <Button
+                      color='danger'
+                      type='button'
+                      disabled={previewEnabled || !password || submitting}
+                      onClick={() => void submit()}
+                    >
+                      {previewEnabled
+                        ? 'Confirm deletion'
+                        : submitting
+                          ? 'Submitting…'
+                          : 'Submit deletion request'}
+                    </Button>
+                  )}
                 </Modal.Footer>
               </Modal.Content>
             </Portal>
