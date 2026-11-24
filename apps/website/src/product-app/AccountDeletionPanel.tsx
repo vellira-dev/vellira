@@ -273,32 +273,18 @@ export function AccountDeletionPanel() {
                       Cancel
                     </Button>
                   </Modal.Close>
-                  {statusMustBeChecked ? (
-                    <Button
-                      type='button'
-                      appearance='outline'
-                      color='neutral'
-                      onClick={() => {
-                        setDialogUserId(null);
-                        setRevision((current) => current + 1);
-                      }}
-                    >
-                      Check request status
-                    </Button>
-                  ) : (
-                    <Button
-                      color='danger'
-                      type='button'
-                      disabled={previewEnabled || !password || submitting}
-                      onClick={() => void submit()}
-                    >
-                      {previewEnabled
-                        ? 'Confirm deletion'
-                        : submitting
-                          ? 'Submitting…'
-                          : 'Submit deletion request'}
-                    </Button>
-                  )}
+                  <Button
+                    color='danger'
+                    type='button'
+                    disabled={previewEnabled || !password || submitting}
+                    onClick={() => void submit()}
+                  >
+                    {previewEnabled
+                      ? 'Confirm deletion'
+                      : submitting
+                        ? 'Submitting…'
+                        : 'Submit deletion request'}
+                  </Button>
                 </Modal.Footer>
               </Modal.Content>
             </Portal>
