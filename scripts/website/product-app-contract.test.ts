@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   bootstrapPersonalWorkspace,
   getAccountDeletionRequestStatus,
+  submitAccountDeletionRequest,
+  verifyAccountDeletionPassword,
   listWorkspaces,
   login,
   resendCurrentVerification,
@@ -118,6 +120,69 @@ describe('Vellira App browser API contract', () => {
         'Invalid deletion status response'
       );
     }
+  });
+
+  it('submits a request only after protected same-session password proof and CSRF', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ csrfToken: 'csrf-step-up' }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ verified: true, expiresInSeconds: 300 }), {
+          status: 200,
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ csrfToken: 'csrf-request' }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ deletion: { status: 'pending_review' } }), {
+          status: 202,
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await verifyAccountDeletionPassword('private-password');
+    await expect(submitAccountDeletionRequest()).resolves.toBe('pending_review');
+
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+    const [proofURL, proofInit] = fetchMock.mock.calls[1] ?? [];
+    expect(proofURL).toBe(
+      'https://api.vellira.dev/v1/auth/account/deletion/step-up/password'
+    );
+    expect(proofInit).toEqual(
+      expect.objectContaining({ method: 'POST', credentials: 'include', cache: 'no-store' })
+    );
+    expect(new Headers(proofInit?.headers).get('X-CSRF-Token')).toBe('csrf-step-up');
+    expect(proofInit?.body).toBe(JSON.stringify({ password: 'private-password' }));
+    expect(String(proofURL)).not.toContain('private-password');
+
+    const [requestURL, requestInit] = fetchMock.mock.calls[3] ?? [];
+    expect(requestURL).toBe('https://api.vellira.dev/v1/auth/account/deletion/request');
+    expect(requestInit).toEqual(
+      expect.objectContaining({ method: 'POST', credentials: 'include', cache: 'no-store' })
+    );
+    expect(new Headers(requestInit?.headers).get('X-CSRF-Token')).toBe('csrf-request');
+    expect(requestInit?.body).toBeUndefined();
+  });
+
+  it('refuses fabricated erasure completion from the deletion request endpoint', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ csrfToken: 'csrf-value' }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ deletion: { status: 'completed' } }), {
+          status: 202,
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(submitAccountDeletionRequest()).rejects.toThrow(
+      'Invalid deletion request response'
+    );
   });
 
   it('retrieves session CSRF before personal workspace bootstrap', async () => {
