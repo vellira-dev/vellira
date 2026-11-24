@@ -114,7 +114,8 @@ export function AccountDeletionPanel() {
   const mayRequest =
     requestEnabled &&
     displayRead.kind === 'ready' &&
-    displayRead.value === 'none';
+    displayRead.value === 'none' &&
+    !statusMustBeChecked;
   const mayOpen = previewEnabled || mayRequest;
   const dialogOpen = mayOpen && dialogUserId === userId;
 
@@ -156,8 +157,9 @@ export function AccountDeletionPanel() {
           setRevision((current) => current + 1);
         } else {
           setRequestError(requestFailureMessage(cause));
-          // Any unknown acknowledgment may mean the request COMMITTED.
-          // Refuse another submission until the status is checked.
+          // An unknown acknowledgment may mean the request COMMITTED.
+          // Close the modal and block resubmission until the user checks
+          // the authoritative deletion request status again.
           if (
             !(cause instanceof VelliraApiError) ||
             !['step_up_denied', 'rate_limited', 'step_up_required', 'csrf_invalid'].includes(
@@ -165,6 +167,7 @@ export function AccountDeletionPanel() {
             )
           ) {
             setStatusMustBeChecked(true);
+            setDialogUserId(null);
           }
         }
       }
@@ -198,7 +201,6 @@ export function AccountDeletionPanel() {
             setDialogUserId(nextOpen && mayOpen ? userId : null);
             setPassword('');
             setRequestError(null);
-            setStatusMustBeChecked(false);
           }}
           closeOnOutsidePress={false}
         >
@@ -320,6 +322,26 @@ export function AccountDeletionPanel() {
             <Select.Item value='pending_review'>Pending review</Select.Item>
           </Select>
           <p>Local preview only. No status request is sent to Vellira.</p>
+        </div>
+      )}
+      {statusMustBeChecked && requestEnabled && (
+        <div className={styles.statusError}>
+          <p role='alert'>
+            The result of your request is uncertain. Verify its status before
+            submitting again.
+          </p>
+          <Button
+            type='button'
+            appearance='outline'
+            color='neutral'
+            size='sm'
+            onClick={() => {
+              setStatusMustBeChecked(false);
+              setRevision((current) => current + 1);
+            }}
+          >
+            Check request status
+          </Button>
         </div>
       )}
       {status === 'ready' && !!userId && (
