@@ -54,7 +54,9 @@ export function AccountDeletionPanel() {
   const { me, status } = useAppSession();
   const userId = me?.id ?? '';
   const identityRef = useRef(userId);
-  identityRef.current = userId;
+  useEffect(() => {
+    identityRef.current = userId;
+  }, [userId]);
 
   const previewEnabled = localAccountPreview && status === 'ready' && !!userId;
   const requestEnabled =
