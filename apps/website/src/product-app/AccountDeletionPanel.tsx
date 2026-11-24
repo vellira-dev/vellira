@@ -216,7 +216,7 @@ export function AccountDeletionPanel() {
               disabled={!mayOpen}
               aria-describedby='account-deletion-help'
             >
-              {previewEnabled ? 'Delete account' : 'Request deletion'}
+              Delete account
             </Button>
           </Modal.Trigger>
           {mayOpen && (
