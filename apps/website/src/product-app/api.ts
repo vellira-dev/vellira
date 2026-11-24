@@ -215,6 +215,54 @@ export async function getAccountDeletionRequestStatus(
   return status;
 }
 
+// Protected deletion REQUEST only. Neither endpoint performs physical erasure.
+// The backend binds the one-time proof to the same authenticated session using
+// a Secure, HttpOnly cookie, and verifies exact Origin + CSRF on each mutation.
+export async function verifyAccountDeletionPassword(password: string): Promise<void> {
+  const csrf = await getCsrfToken();
+  const result = await apiRequest<unknown>(
+    '/v1/auth/account/deletion/step-up/password',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': csrf,
+      },
+      body: JSON.stringify({ password }),
+    }
+  );
+  if (!result || typeof result !== 'object' ||
+      !('verified' in result) || result.verified !== true ||
+      !('expiresInSeconds' in result) ||
+      typeof result.expiresInSeconds !== 'number' ||
+      !Number.isSafeInteger(result.expiresInSeconds) ||
+      result.expiresInSeconds <= 0 || result.expiresInSeconds > 300) {
+    throw new Error('Invalid account deletion verification response');
+  }
+}
+
+export async function submitAccountDeletionRequest(): Promise<AccountDeletionRequestStatus> {
+  const csrf = await getCsrfToken();
+  const response: unknown = await apiRequest<unknown>(
+    '/v1/auth/account/deletion/request',
+    {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': csrf },
+      // The backend deliberately requires an empty body and consumes the
+      // short-lived server-owned proof cookie, not a browser-supplied token.
+    }
+  );
+  if (!response || typeof response !== 'object' || !('deletion' in response)) {
+    throw new Error('Invalid deletion request response');
+  }
+  const value = response.deletion;
+  if (!value || typeof value !== 'object' ||
+      !('status' in value) || value.status !== 'pending_review') {
+    throw new Error('Invalid deletion request response');
+  }
+  return 'pending_review';
+}
+
 function readAccountProfile(payload: unknown): AccountProfile {
   if (!payload || typeof payload !== 'object' || !('profile' in payload)) {
     throw new Error('Invalid account profile response');
