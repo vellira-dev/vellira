@@ -218,7 +218,9 @@ export async function getAccountDeletionRequestStatus(
 // Protected deletion REQUEST only. Neither endpoint performs physical erasure.
 // The backend binds the one-time proof to the same authenticated session using
 // a Secure, HttpOnly cookie, and verifies exact Origin + CSRF on each mutation.
-export async function verifyAccountDeletionPassword(password: string): Promise<void> {
+export async function verifyAccountDeletionPassword(
+  password: string
+): Promise<void> {
   const csrf = await getCsrfToken();
   const result = await apiRequest<unknown>(
     '/v1/auth/account/deletion/step-up/password',
@@ -231,12 +233,17 @@ export async function verifyAccountDeletionPassword(password: string): Promise<v
       body: JSON.stringify({ password }),
     }
   );
-  if (!result || typeof result !== 'object' ||
-      !('verified' in result) || result.verified !== true ||
-      !('expiresInSeconds' in result) ||
-      typeof result.expiresInSeconds !== 'number' ||
-      !Number.isSafeInteger(result.expiresInSeconds) ||
-      result.expiresInSeconds <= 0 || result.expiresInSeconds > 300) {
+  if (
+    !result ||
+    typeof result !== 'object' ||
+    !('verified' in result) ||
+    result.verified !== true ||
+    !('expiresInSeconds' in result) ||
+    typeof result.expiresInSeconds !== 'number' ||
+    !Number.isSafeInteger(result.expiresInSeconds) ||
+    result.expiresInSeconds <= 0 ||
+    result.expiresInSeconds > 300
+  ) {
     throw new Error('Invalid account deletion verification response');
   }
 }
@@ -256,8 +263,12 @@ export async function submitAccountDeletionRequest(): Promise<AccountDeletionReq
     throw new Error('Invalid deletion request response');
   }
   const value = response.deletion;
-  if (!value || typeof value !== 'object' ||
-      !('status' in value) || value.status !== 'pending_review') {
+  if (
+    !value ||
+    typeof value !== 'object' ||
+    !('status' in value) ||
+    value.status !== 'pending_review'
+  ) {
     throw new Error('Invalid deletion request response');
   }
   return 'pending_review';

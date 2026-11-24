@@ -126,25 +126,37 @@ describe('Vellira App browser API contract', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ csrfToken: 'csrf-step-up' }), { status: 200 })
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ verified: true, expiresInSeconds: 300 }), {
+        new Response(JSON.stringify({ csrfToken: 'csrf-step-up' }), {
           status: 200,
         })
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ csrfToken: 'csrf-request' }), { status: 200 })
+        new Response(
+          JSON.stringify({ verified: true, expiresInSeconds: 300 }),
+          {
+            status: 200,
+          }
+        )
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ deletion: { status: 'pending_review' } }), {
-          status: 202,
+        new Response(JSON.stringify({ csrfToken: 'csrf-request' }), {
+          status: 200,
         })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ deletion: { status: 'pending_review' } }),
+          {
+            status: 202,
+          }
+        )
       );
     vi.stubGlobal('fetch', fetchMock);
 
     await verifyAccountDeletionPassword('private-password');
-    await expect(submitAccountDeletionRequest()).resolves.toBe('pending_review');
+    await expect(submitAccountDeletionRequest()).resolves.toBe(
+      'pending_review'
+    );
 
     expect(fetchMock).toHaveBeenCalledTimes(4);
     const [proofURL, proofInit] = fetchMock.mock.calls[1] ?? [];
@@ -152,18 +164,34 @@ describe('Vellira App browser API contract', () => {
       'https://api.vellira.dev/v1/auth/account/deletion/step-up/password'
     );
     expect(proofInit).toEqual(
-      expect.objectContaining({ method: 'POST', credentials: 'include', cache: 'no-store' })
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      })
     );
-    expect(new Headers(proofInit?.headers).get('X-CSRF-Token')).toBe('csrf-step-up');
-    expect(proofInit?.body).toBe(JSON.stringify({ password: 'private-password' }));
+    expect(new Headers(proofInit?.headers).get('X-CSRF-Token')).toBe(
+      'csrf-step-up'
+    );
+    expect(proofInit?.body).toBe(
+      JSON.stringify({ password: 'private-password' })
+    );
     expect(String(proofURL)).not.toContain('private-password');
 
     const [requestURL, requestInit] = fetchMock.mock.calls[3] ?? [];
-    expect(requestURL).toBe('https://api.vellira.dev/v1/auth/account/deletion/request');
-    expect(requestInit).toEqual(
-      expect.objectContaining({ method: 'POST', credentials: 'include', cache: 'no-store' })
+    expect(requestURL).toBe(
+      'https://api.vellira.dev/v1/auth/account/deletion/request'
     );
-    expect(new Headers(requestInit?.headers).get('X-CSRF-Token')).toBe('csrf-request');
+    expect(requestInit).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-store',
+      })
+    );
+    expect(new Headers(requestInit?.headers).get('X-CSRF-Token')).toBe(
+      'csrf-request'
+    );
     expect(requestInit?.body).toBeUndefined();
   });
 
@@ -171,7 +199,9 @@ describe('Vellira App browser API contract', () => {
     const fetchMock = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ csrfToken: 'csrf-value' }), { status: 200 })
+        new Response(JSON.stringify({ csrfToken: 'csrf-value' }), {
+          status: 200,
+        })
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify({ deletion: { status: 'completed' } }), {

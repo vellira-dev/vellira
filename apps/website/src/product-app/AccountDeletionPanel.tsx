@@ -162,9 +162,12 @@ export function AccountDeletionPanel() {
           // the authoritative deletion request status again.
           if (
             !(cause instanceof VelliraApiError) ||
-            !['step_up_denied', 'rate_limited', 'step_up_required', 'csrf_invalid'].includes(
-              cause.code
-            )
+            ![
+              'step_up_denied',
+              'rate_limited',
+              'step_up_required',
+              'csrf_invalid',
+            ].includes(cause.code)
           ) {
             setStatusMustBeChecked(true);
             setDialogUserId(null);
@@ -223,7 +226,9 @@ export function AccountDeletionPanel() {
                 <Modal.Header>
                   <div>
                     <Modal.Title>
-                      {previewEnabled ? 'Delete your account?' : 'Request account deletion?'}
+                      {previewEnabled
+                        ? 'Delete your account?'
+                        : 'Request account deletion?'}
                     </Modal.Title>
                     <Modal.Description>
                       Deletion is irreversible after execution. A request does
@@ -341,8 +346,8 @@ export function AccountDeletionPanel() {
           {displayRead.kind === 'ready' &&
             displayRead.value === 'pending_review' && (
               <p role='status'>
-                Deletion request pending review. Your account remains active;
-                no data has been erased.
+                Deletion request pending review. Your account remains active; no
+                data has been erased.
               </p>
             )}
           {displayRead.kind === 'error' && (
