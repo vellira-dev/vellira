@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
-import { Button, Modal, Portal, Select } from '@vellira-ui/react';
+import { Button, Input, Modal, Portal, Select } from '@vellira-ui/react';
 
 import {
   getAccountDeletionRequestStatus,
+  submitAccountDeletionRequest,
+  verifyAccountDeletionPassword,
+  VelliraApiError,
   type AccountDeletionRequestStatus,
 } from './api';
 import { localAccountPreview, useAppSession } from './AppSession';
@@ -13,9 +16,11 @@ import { localAccountPreview, useAppSession } from './AppSession';
 import profileStyles from './AccountProfilePanel.module.css';
 import styles from './AccountDeletionPanel.module.css';
 
-// The only production request is an authenticated GET for status.
-// Creating or completing an account deletion remains disabled; the local
-// development fixture alone can open a non-mutating confirmation preview.
+// The request endpoint records pending_review only; it does not erase data.
+// Public deployment remains disabled until independent backend/UX admission.
+const requestFeatureEnabled =
+  process.env.NEXT_PUBLIC_VELLIRA_ACCOUNT_DELETION_REQUEST_ENABLED === 'true';
+
 type DeletionRead =
   | { kind: 'loading' | 'error'; userId: string; revision: number }
   | {
@@ -25,12 +30,45 @@ type DeletionRead =
       value: AccountDeletionRequestStatus;
     };
 
+function requestFailureMessage(cause: unknown): string {
+  if (cause instanceof VelliraApiError) {
+    switch (cause.code) {
+      case 'step_up_denied':
+        return 'Password verification failed. Check your password and try again.';
+      case 'rate_limited':
+        return 'Too many verification attempts. Try again later.';
+      case 'deletion_already_requested':
+        return 'An account deletion request is already pending. Refresh its status.';
+      case 'step_up_required':
+        return 'Identity verification expired. Please try again.';
+      case 'csrf_invalid':
+        return 'Your session could not be verified. Refresh and try again.';
+      default:
+        return 'Deletion requests are temporarily unavailable. No deletion was confirmed.';
+    }
+  }
+  return 'The request result could not be verified. Check the request status before trying again.';
+}
+
 export function AccountDeletionPanel() {
   const { me, status } = useAppSession();
   const userId = me?.id ?? '';
+  const identityRef = useRef(userId);
+  identityRef.current = userId;
+
   const previewEnabled = localAccountPreview && status === 'ready' && !!userId;
+  const requestEnabled =
+    !localAccountPreview &&
+    requestFeatureEnabled &&
+    status === 'ready' &&
+    !!userId;
+
   const [revision, setRevision] = useState(0);
   const [dialogUserId, setDialogUserId] = useState<string | null>(null);
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
   const [previewStatus, setPreviewStatus] =
     useState<AccountDeletionRequestStatus>('none');
   const [storedRead, setStoredRead] = useState<DeletionRead>({
@@ -40,8 +78,6 @@ export function AccountDeletionPanel() {
   });
 
   useEffect(() => {
-    // This is a read-only session-scoped view, never a deletion request.
-    // The local design fixture must not make real backend requests.
     if (localAccountPreview || status !== 'ready' || !userId) return;
 
     const abort = new AbortController();
@@ -60,8 +96,7 @@ export function AccountDeletionPanel() {
     return () => abort.abort();
   }, [status, userId, revision]);
 
-  // Never display the previous account's status while the current session
-  // or a retry is resolving, including during the render before effects run.
+  // Never display previous account's deletion status on a principal change.
   const visibleRead: DeletionRead =
     status === 'ready' &&
     !!userId &&
@@ -72,7 +107,54 @@ export function AccountDeletionPanel() {
   const displayRead: DeletionRead = previewEnabled
     ? { kind: 'ready', userId, revision, value: previewStatus }
     : visibleRead;
-  const previewOpen = previewEnabled && dialogUserId === userId;
+
+  const mayRequest =
+    requestEnabled &&
+    displayRead.kind === 'ready' &&
+    displayRead.value === 'none';
+  const mayOpen = previewEnabled || mayRequest;
+  const dialogOpen = mayOpen && dialogUserId === userId;
+
+  const submit = async () => {
+    if (
+      !mayRequest ||
+      dialogUserId !== userId ||
+      password.length === 0 ||
+      submittingRef.current
+    ) {
+      return;
+    }
+    submittingRef.current = true;
+    setSubmitting(true);
+    setRequestError(null);
+    const initiatingUser = userId;
+    try {
+      // Server owns the grant in a one-use HttpOnly cookie. Never store it in
+      // JavaScript, the URL, a browser cache, or account-profile state.
+      await verifyAccountDeletionPassword(password);
+      if (identityRef.current !== initiatingUser) return;
+      const result = await submitAccountDeletionRequest();
+      if (identityRef.current !== initiatingUser) return;
+      setStoredRead({
+        kind: 'ready',
+        userId: initiatingUser,
+        revision,
+        value: result,
+      });
+      setDialogUserId(null);
+    } catch (cause) {
+      if (identityRef.current === initiatingUser) {
+        setRequestError(requestFailureMessage(cause));
+        // A timeout/ambiguous acknowledgment is NOT proof of failure or
+        // completion. Force a fresh read from the authoritative status API.
+        setRevision((current) => current + 1);
+      }
+    } finally {
+      setPassword('');
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  };
 
   return (
     <section
@@ -86,56 +168,94 @@ export function AccountDeletionPanel() {
       <div className={styles.actionRow}>
         <div className={styles.copy}>
           <h4>Delete account</h4>
-          <p>Close your account and request data removal.</p>
-          <p>Some records may be retained for legal reasons.</p>
+          <p>Request permanent removal of your Vellira account.</p>
+          <p>Some information may need to be retained for legal obligations.</p>
         </div>
         <Modal
           role='alertdialog'
-          open={previewOpen}
-          onOpenChange={(nextOpen) =>
-            setDialogUserId(nextOpen && previewEnabled ? userId : null)
-          }
+          open={dialogOpen}
+          onOpenChange={(nextOpen) => {
+            if (submittingRef.current) return;
+            setDialogUserId(nextOpen && mayOpen ? userId : null);
+            setPassword('');
+            setRequestError(null);
+          }}
           closeOnOutsidePress={false}
         >
-          <Modal.Trigger asChild disabled={!previewEnabled}>
+          <Modal.Trigger asChild disabled={!mayOpen}>
             <Button
               type='button'
               appearance='outline'
               color='danger'
               size='sm'
-              disabled={!previewEnabled}
+              disabled={!mayOpen}
               aria-describedby='account-deletion-help'
             >
-              Delete account
+              {previewEnabled ? 'Delete account' : 'Request deletion'}
             </Button>
           </Modal.Trigger>
-          {previewEnabled && (
+          {mayOpen && (
             <Portal>
               <Modal.Overlay />
               <Modal.Content size='sm' scrollBehavior='inside'>
                 <Modal.Header>
                   <div>
-                    <Modal.Title>Delete your account?</Modal.Title>
+                    <Modal.Title>Request account deletion?</Modal.Title>
                     <Modal.Description>
-                      Identity verification is required before deletion.
+                      Deletion is irreversible after execution. A request does
+                      not mean your account is already deleted.
                     </Modal.Description>
                   </div>
                   <Modal.Close />
                 </Modal.Header>
                 <Modal.Body>
-                  <div className={styles.previewMessage}>
-                    <p>This preview never sends a deletion request.</p>
-                    <p>Real deletion requires identity and data checks.</p>
-                  </div>
+                  {previewEnabled ? (
+                    <div className={styles.previewMessage}>
+                      <p>This preview never sends a deletion request.</p>
+                      <p>Real deletion requires identity and data checks.</p>
+                    </div>
+                  ) : (
+                    <div className={styles.previewMessage}>
+                      <p>
+                        Confirm your current password to submit a deletion
+                        request. It may require additional review of workspaces,
+                        subscriptions, and retained records.
+                      </p>
+                      <p>
+                        Your account remains active until deletion is actually
+                        completed and confirmed.
+                      </p>
+                      <Input
+                        label='Current password'
+                        type='password'
+                        value={password}
+                        autoComplete='current-password'
+                        onValueChange={setPassword}
+                        disabled={submitting}
+                        size='md'
+                      />
+                      {requestError && <p role='alert'>{requestError}</p>}
+                    </div>
+                  )}
                 </Modal.Body>
                 <Modal.Footer>
                   <Modal.Close asChild>
-                    <Button appearance='ghost' color='neutral' type='button'>
+                    <Button
+                      appearance='ghost'
+                      color='neutral'
+                      type='button'
+                      disabled={submitting}
+                    >
                       Cancel
                     </Button>
                   </Modal.Close>
-                  <Button color='danger' type='button' disabled>
-                    Confirm deletion
+                  <Button
+                    color='danger'
+                    type='button'
+                    disabled={previewEnabled || !password || submitting}
+                    onClick={() => void submit()}
+                  >
+                    {submitting ? 'Submitting…' : 'Submit deletion request'}
                   </Button>
                 </Modal.Footer>
               </Modal.Content>
@@ -143,6 +263,7 @@ export function AccountDeletionPanel() {
           )}
         </Modal>
       </div>
+
       {previewEnabled && (
         <div className={styles.previewControls} data-deletion-status-preview>
           <Select
@@ -172,8 +293,8 @@ export function AccountDeletionPanel() {
           {displayRead.kind === 'ready' &&
             displayRead.value === 'pending_review' && (
               <p role='status'>
-                Deletion request pending review. Your account remains active; no
-                data has been erased.
+                Deletion request pending review. Your account remains active;
+                no data has been erased.
               </p>
             )}
           {displayRead.kind === 'error' && (
@@ -197,7 +318,9 @@ export function AccountDeletionPanel() {
       <p id='account-deletion-help' className={styles.help}>
         {previewEnabled
           ? 'Demo only — this action cannot delete an account.'
-          : 'Account deletion will be available only after secure identity verification and data erasure are enabled.'}
+          : requestEnabled
+            ? 'Requests are verified and reviewed before any irreversible deletion. Submitting a request does not erase data.'
+            : 'Deletion requests are unavailable until secure identity verification and data erasure are enabled.'}
       </p>
     </section>
   );
