@@ -149,7 +149,7 @@ try {
   assert.ok(deletionReads >= 1 && deletionReads <= 2,
     'Deletion status must be read once (or twice in dev Strict Mode), without mutations');
   assert.ok((await danger.locator('#account-deletion-help').textContent()).includes(
-    'only after secure identity verification'),
+    'Deletion requests are unavailable until secure identity verification and data erasure are enabled.'),
   'Unavailable account deletion must have a truthful explanation');
   assert.equal(await page.getByRole('alertdialog', { name: 'Delete your account?' }).count(), 0,
     'No confirmation flow can be rendered for production-shaped sessions');
