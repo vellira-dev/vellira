@@ -143,9 +143,13 @@ try {
   assert.equal(await deleteTrigger.isDisabled(), true,
     'Production-shaped Account Settings must not expose account deletion before approved backend erasure');
   await danger.getByText('No deletion request is pending.', { exact: true }).waitFor();
-  assert.equal(deletionReads, 1, 'Read-only deletion status must be loaded once per authenticated view');
+  // Next.js development React effects can mount twice (Strict Mode), with the
+  // first read aborted. Both requests are observational GETs; the test still
+  // rejects missing reads, unbounded duplicates and all deletion mutations.
+  assert.ok(deletionReads >= 1 && deletionReads <= 2,
+    'Deletion status must be read once (or twice in dev Strict Mode), without mutations');
   assert.ok((await danger.locator('#account-deletion-help').textContent()).includes(
-    'only after secure identity verification'),
+    'Deletion requests are unavailable until secure identity verification and data erasure are enabled.'),
   'Unavailable account deletion must have a truthful explanation');
   assert.equal(await page.getByRole('alertdialog', { name: 'Delete your account?' }).count(), 0,
     'No confirmation flow can be rendered for production-shaped sessions');
@@ -155,7 +159,8 @@ try {
     'account-email-change-help',
     'Unavailable email changes must have readable guidance'
   );
-  assert.equal(emailReads, 1, 'current sign-in email must load from auth exactly once');
+  assert.ok(emailReads >= 1 && emailReads <= 2,
+    'Current sign-in email must load from auth, with at most one dev Strict Mode replay');
   assert.equal(
     await page.getByRole('heading', { name: 'Account details' }).count(),
     0,
@@ -170,7 +175,8 @@ try {
     'Verified indicator should sit beside the email, with its check icon'
   );
   assert.equal(await page.locator('[data-profile-save-bar]').count(), 0, 'Clean profile must not show the sticky bar');
-  assert.equal(profileReads, 1, 'profile GET must be read-only and load exactly once');
+  assert.ok(profileReads >= 1 && profileReads <= 2,
+    'Profile GET must be read-only, with at most one dev Strict Mode replay');
 
   // The backend requires a full name for first write, even if only a
   // preference was edited. Prevent a doomed PATCH rather than showing 400.
@@ -296,10 +302,31 @@ try {
     const mobileBar = await dirtyBar.boundingBox();
     if (!mobileBar) throw new Error('Dirty action bar is not visible on viewport ' + width);
     assert.ok(mobileBar.x >= 0 && mobileBar.x + mobileBar.width <= width + 1, 'Sticky bar must fit viewport ' + width);
-    assert.equal(
-      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
-      false,
-      'Account profile must fit viewport ' + width
+    const overflow = await page.evaluate(() => {
+      const viewport = window.innerWidth;
+      const pageWidth = document.documentElement.scrollWidth;
+      const offenders = [...document.querySelectorAll('body *')]
+        .map((element) => {
+          const rect = element.getBoundingClientRect();
+          return {
+            tag: element.tagName.toLowerCase(),
+            className: typeof element.className === 'string' ? element.className.slice(0, 160) : '',
+            text: (element.textContent || '').trim().slice(0, 80),
+            left: Math.round(rect.left),
+            right: Math.round(rect.right),
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+          };
+        })
+        .filter((item) => item.right > viewport + 1 || item.left < -1)
+        .sort((a, b) => b.right - a.right)
+        .slice(0, 12);
+      return { viewport, pageWidth, offenders };
+    });
+    assert.ok(
+      overflow.pageWidth <= overflow.viewport,
+      'Account profile must fit viewport ' + width +
+        '; overflow diagnostics: ' + JSON.stringify(overflow)
     );
   }
   await dirtyBar.getByRole('button', { name: 'Discard' }).click();
