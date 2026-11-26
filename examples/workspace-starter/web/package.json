@@ -11,7 +11,7 @@
   "dependencies": {
     "@vellira-ui/react": "2.201.0",
     "@vellira-ui/tokens": "2.201.0",
-    "react": "19.3.0",
+    "react": "19.3.1",
     "react-dom": "19.3.0",
     "@vellira-ui/icons": "2.201.0"
   },
